@@ -14,15 +14,15 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }) => {
-    const [admin, setAdmin] = useState(null);
+    const [cliente, setCliente] = useState(null);
     const [isAuth, setIsAuth] = useState(false);
     const [error, setError] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    const register = async (admin) => {
+    const register = async (cliente) => {
         try {
-            const res = await addAdminRequest(admin);
-            setAdmin(res.data);
+            const res = await (cliente);
+            setCliente(res.data);
             setIsAuth(true);
         } catch (error) {
             setError([error.response ? error.response.data : 'An error occurred']);
@@ -30,19 +30,20 @@ export const AuthProvider = ({ children }) => {
         }
     }
  
-    const createUser = async (admin) => {
-    try {
-        const res = await addAdminRequest(admin);
-        return { success: true, user: res.data };
-    } catch (error) {
-        setError([error.response ? error.response.data : 'An error occurred']);
-        return { success: false, error: error.response?.data };
-    }
-}
-    const signup = async (admin) => {
+    const createUser = async (cliente) => {
         try {
-            const res = await registerRequest(admin);
-            setAdmin(res.data);
+            const res = await addAdminRequest(cliente);
+            return { success: true, user: res.data };
+        } catch (error) {
+            setError([error.response ? error.response.data : 'An error occurred']);
+            return { success: false, error: error.response?.data };
+        }
+    }
+
+    const signup = async (cliente) => {
+        try {
+            const res = await registerRequest(cliente);
+            setCliente(res.data);
             setIsAuth(true);
         } catch (error) {
             setError([error.response ? error.response.data : 'An error occurred']);
@@ -50,11 +51,11 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    const login = async (admin) => {
+    const login = async (cliente) => {
         try {
-            const res = await loginRequest(admin);
+            const res = await loginRequest(cliente);
             setIsAuth(true);
-            setAdmin(res.data);
+            setCliente(res.data);
         } catch (error) {
             setError([error.response ? error.response.data : 'An error occurred']);
             setIsAuth(false);
@@ -72,26 +73,23 @@ export const AuthProvider = ({ children }) => {
     };
 
     const getUserById = useCallback(async (id) => {
-  try {
-    const res = await getAdminRequest(id); // Asegúrate que esta ruta exista en el backend
-    return res.data;
-  } catch (error) {
-    console.error("Error al obtener el usuario:", error);
-    throw new Error("No se pudo obtener el usuario");
-  }
-}, []);
+        try {
+            const res = await getAdminRequest(id);
+            return res.data;
+        } catch (error) {
+            console.error("Error al obtener el usuario:", error);
+            throw new Error("No se pudo obtener el usuario");
+        }
+    }, []);
 
     const deleteUsers = async (ids) => {
         try {
-            // ids puede ser un solo id o un array de ids
             if (Array.isArray(ids)) {
-                // Ejecuta todas las peticiones en paralelo
                 const results = await Promise.all(
                     ids.map(id => deleteAdminRequest(id))
                 );
                 return results.map(res => res.data);
             } else {
-                // Si es un solo id
                 const res = await deleteAdminRequest(ids);
                 return res.data;
             }
@@ -100,12 +98,13 @@ export const AuthProvider = ({ children }) => {
             throw error;
         }  
     };
+
     const logout = () => {
         Cookies.remove('token');
         setIsAuth(false);
-        setAdmin(null);
-
+        setCliente(null);
     }
+
     useEffect(() => {
         if (error.length > 0) {
             const timer = setTimeout(() => {
@@ -122,37 +121,35 @@ export const AuthProvider = ({ children }) => {
             if (!cookies.token) {
                 setIsAuth(false);
                 setLoading(false);
-                return setAdmin(null);
-                
+                return setCliente(null);
             }
                 
-                try {
-                    const res = await verifyTokenRequest(cookies.token);
-                    console.log(res);
-                    if (!res.data) {
-                        setIsAuth(false);
-                        setLoading(false);
-                        return;
-                    }
-
-                    setIsAuth(true);
-                    setAdmin(res.data);
-                    setLoading(false);
-                } catch (error) {
-                    console.error('Token verification failed:', error);
+            try {
+                const res = await verifyTokenRequest(cookies.token);
+                console.log(res);
+                if (!res.data) {
                     setIsAuth(false);
-                    setAdmin(null);
                     setLoading(false);
+                    return;
                 }
-            
+
+                setIsAuth(true);
+                setCliente(res.data);
+                setLoading(false);
+            } catch (error) {
+                console.error('Token verification failed:', error);
+                setIsAuth(false);
+                setCliente(null);
+                setLoading(false);
+            }
         };
         checkLogin();
     }, []);
 
     return (
         <AuthContext.Provider value={{
-            admin,
-            setAdmin,
+            cliente,
+            setCliente,
             signup,
             register,
             getUsers,
