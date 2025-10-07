@@ -5,14 +5,14 @@ import logo from "../assets/images/logo.png";
 
 function Register() {
   const navigate = useNavigate();
-  const { signup, error: authError } = useAuth();
+  const { register, error: authError } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     nombre: "",
     correo: "",
     telefono: "",
     password: "",
-    rol: "cliente" // Agregamos el rol por defecto
+    rol: false
   });
   const [errors, setErrors] = useState({});
   const [showSuccess, setShowSuccess] = useState(false);
@@ -66,8 +66,9 @@ function Register() {
     
     if (validateForm()) {
       try {
-        await signup(formData);
+        await register(formData);
         setShowSuccess(true);
+        console.log("hay:", formData);
         setTimeout(() => {
           setShowSuccess(false);
           navigate("/login");

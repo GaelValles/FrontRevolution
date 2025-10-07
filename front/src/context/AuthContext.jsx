@@ -21,12 +21,16 @@ export const AuthProvider = ({ children }) => {
 
     const register = async (cliente) => {
         try {
-            const res = await (cliente);
+            const res = await registerRequest(cliente);
             setCliente(res.data);
+            console.log("Lo que se guarda es:", res);
             setIsAuth(true);
+            return res.data;
         } catch (error) {
+            console.log(error.response?.data);
             setError([error.response ? error.response.data : 'An error occurred']);
-            setIsAuth(false); 
+            setIsAuth(false);
+            throw error; 
         }
     }
  
