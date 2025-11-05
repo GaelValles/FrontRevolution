@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { useAuth } from "../context/AuthContext";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -10,18 +10,16 @@ import logo from "../assets/images/logo.png";
 function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const { register, handleSubmit, formState: { errors } } = useForm();
-  const { login, error: loginErrors, isAuth } = useAuth();
+  const { login, error: loginErrors, isAuth, cliente } = useAuth();
   const navigate = useNavigate();
 
   const onSubmit = handleSubmit(async data => {
-    await login(data);
-  });
-
-  useEffect(() => {
-    if (isAuth) {
+    const res = await login(data);
+    if (res.success) {
+      // Show success toast
       toast.success("¡Acceso autorizado!", {
         position: "top-center",
-        autoClose: 2000,
+        autoClose: 1500,
         hideProgressBar: false,
         closeOnClick: true,
         pauseOnHover: true,
@@ -33,9 +31,17 @@ function Login() {
           border: "1px solid #666666"
         }
       });
-      setTimeout(() => navigate("/inicio"), 2000);
+
+      // Redirect based on role after toast
+      setTimeout(() => {
+        if (cliente?.rol) {
+          navigate('/loading', { state: { destination: '/inicioAdmin' } });
+        } else {
+          navigate('/loading', { state: { destination: '/inicioCliente' } });
+        }
+      }, 1500);
     }
-  }, [isAuth, navigate]);
+  });
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-black to-gray-800 relative overflow-hidden">

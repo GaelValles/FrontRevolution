@@ -1,7 +1,6 @@
 import axios from './axios';
 
-export const registerRequest = cliente => axios.post(`/register`, cliente);
-
-export const loginRequest = admin => axios.post(`/login`, admin);
-
-export const verifyTokenRequest = () => axios.get(`/verify`);
+// Cliente authentication
+export const registerRequest = cliente => axios.post('/register', cliente);
+export const loginRequest = cliente => axios.post('/login', cliente);
+export const verifyTokenRequest = () => axios.get('/verify');

@@ -1,6 +1,12 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { registerRequest, loginRequest, verifyTokenRequest } from '../api/auth';
-import { addAdminRequest, getAdminsRequest, deleteAdminRequest, getAdminRequest } from '../api/auth.admin';
+import { 
+    addAdminRequest, 
+    getAdminsRequest, 
+    deleteAdminRequest, 
+    getAdminRequest,
+    loginAdminRequest
+} from '../api/auth.admin';
 import Cookies from 'js-cookie';
 
 const AuthContext = createContext();
@@ -55,14 +61,22 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    const login = async (cliente) => {
+    const login = async (user) => {
         try {
-            const res = await loginRequest(cliente);
+            const res = await loginRequest(user);
             setIsAuth(true);
             setCliente(res.data);
+            return { 
+                success: true, 
+                role: res.data.rol 
+            };
         } catch (error) {
-            setError([error.response ? error.response.data : 'An error occurred']);
+            setError([error.response?.data?.message || 'Error de autenticación']);
             setIsAuth(false);
+            return { 
+                success: false, 
+                error: error.response?.data 
+            };
         }
     };
 
@@ -71,18 +85,19 @@ export const AuthProvider = ({ children }) => {
             const res = await getAdminsRequest();
             return res.data;
         } catch (error) {
-            setError([error.response ? error.response.data : 'An error occurred']);
+            setError([error.response?.data?.message || 'Error al obtener usuarios']);
             throw error;
         }
     };
 
-    const getUserById = useCallback(async (id) => {
+    const getClienteById = useCallback(async (id) => {
         try {
             const res = await getAdminRequest(id);
             return res.data;
         } catch (error) {
             console.error("Error al obtener el usuario:", error);
-            throw new Error("No se pudo obtener el usuario");
+            setError(["No se pudo obtener el usuario"]);
+            throw error;
         }
     }, []);
 
@@ -98,7 +113,7 @@ export const AuthProvider = ({ children }) => {
                 return res.data;
             }
         } catch (error) {
-            setError([error.response ? error.response.data : 'An error occurred']);
+            setError([error.response?.data?.message || 'Error al eliminar usuario(s)']);
             throw error;
         }  
     };
@@ -157,7 +172,7 @@ export const AuthProvider = ({ children }) => {
             signup,
             register,
             getUsers,
-            getUserById,
+            getClienteById,
             createUser,
             deleteUsers,
             login,
