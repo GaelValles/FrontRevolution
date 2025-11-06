@@ -181,6 +181,7 @@ export const AuthProvider = ({ children }) => {
             error,
             setError,
             loading,
+            verifyTokenRequest,  // Add this
             logout
         }}>
             {children}

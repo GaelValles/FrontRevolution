@@ -9,34 +9,58 @@ import { Car, User, Phone, Calendar, Clock, Star, BookOpen, Plus } from 'lucide-
 
 const InicioCliente = () => {
   const { cliente } = useAuth();
-  const { deleteCarros } = useCarro();
   const navigate = useNavigate();
+  const { deleteCarros } = useCarro(); // Add this import
   
   const [vehiculosCliente, setVehiculosCliente] = useState([]);
   const [citasCliente, setCitasCliente] = useState([]);
-  const [error, setError] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [error, setError] = useState(null); // Add error state
 
   useEffect(() => {
-    // Los IDs de los carros ya vienen en cliente.carros
-    if (cliente?.carros) {
-      setVehiculosCliente(cliente.carros);
+    try {
+      if (cliente?.carros && Array.isArray(cliente.carros)) {
+        setVehiculosCliente(cliente.carros);
+      }
+      
+      if (cliente?.citas && Array.isArray(cliente.citas)) {
+        const citasActivas = cliente.citas.filter(cita => 
+          cita.estado === 'programada' || cita.estado === 'en_proceso'
+        );
+        setCitasCliente(citasActivas);
+      }
+    } catch (err) {
+      setError('Error al cargar los datos');
+      console.error('Error en useEffect:', err);
     }
   }, [cliente]);
 
   const handleDeleteVehiculo = async (id) => {
     try {
       await deleteCarros(id);
-      setVehiculosCliente(prev => prev.filter(vehiculo => vehiculo !== id));
-    } catch (error) {
+      setVehiculosCliente(prev => prev.filter(vehiculo => vehiculo._id !== id));
+    } catch (err) {
       setError('No se pudo eliminar el vehículo');
+      console.error('Error al eliminar vehículo:', err);
     }
   };
 
+  // Add error clearing function
+  const clearError = () => setError(null);
+
+  // Error display with dismissal
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 flex items-center justify-center">
-        <div className="text-red-500 text-xl">{error}</div>
+        <div className="bg-red-500/10 backdrop-blur-xl rounded-xl border border-red-500/20 p-8 max-w-md w-full mx-4">
+          <div className="text-red-500 text-center mb-4">{error}</div>
+          <button
+            onClick={clearError}
+            className="w-full bg-red-500/20 hover:bg-red-500/30 text-red-500 font-bold py-2 px-4 rounded-lg transition-all duration-300"
+          >
+            Intentar nuevamente
+          </button>
+        </div>
       </div>
     );
   }
@@ -85,118 +109,62 @@ const InicioCliente = () => {
                     </div>
                   </div>
 
-                  {/* Service Overview */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-                    <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-                      <BookOpen className="w-6 h-6 text-blue-400 mb-2" />
-                      <h3 className="font-bold text-white">Guía Rápida</h3>
-                      <p className="text-white/70 text-sm">Aprende a usar todos nuestros servicios premium</p>
-                    </div>
                     {/* Add more overview cards as needed */}
-                  </div>
+                  
                 </div>
               </div>
             </div>
           </header>
 
+
+          {/* Vehicles Section */}
+          <section className="max-w-7xl mx-auto mb-16">
+            <div className="text-center md:text-left mb-8">
+              <h2 className="text-3xl font-black text-white mb-2 tracking-tight">
+                MIS VEHÍCULOS
+              </h2>
+              <p className="text-white/70">
+                {vehiculosCliente.length > 0 
+                  ? "Tus vehículos registrados" 
+                  : "No tienes vehículos registrados"}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {vehiculosCliente.map((vehiculo) => (
+                <VehiculoCard 
+                  key={vehiculo._id}
+                  vehiculo={vehiculo} // Pasar el objeto completo
+                  onDelete={handleDeleteVehiculo}
+                />
+              ))}
+            </div>
+          </section>
+
           {/* Appointments Section */}
           <section className="max-w-7xl mx-auto mb-16">
-            <div className="text-center mb-8">
+            <div className="text-center md:text-left mb-8">
               <h2 className="text-3xl font-black text-white mb-2 tracking-tight">
-                MIS CITAS
+                PRÓXIMAS CITAS
               </h2>
               <p className="text-white/70">
                 {citasCliente.length > 0 
-                  ? "Administra tus citas programadas" 
+                  ? "Tus citas programadas" 
                   : "No tienes citas programadas"}
               </p>
             </div>
 
-            {citasCliente.length > 0 ? (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {citasCliente.map((cita) => (
-                  <CitaClienteCard key={cita.id} cita={cita} />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-20 bg-black/40 backdrop-blur-xl rounded-2xl border border-white/10">
-                <div className="inline-block p-8 bg-white/5 rounded-full mb-6">
-                  <Calendar className="w-16 h-16 text-white/30" />
-                </div>
-                <h3 className="text-xl font-black text-white mb-2">
-                  NO HAY CITAS PROGRAMADAS
-                </h3>
-                <p className="text-white/70 mb-6 max-w-md mx-auto">
-                  Agenda tu próximo servicio y dale a tu vehículo el cuidado que merece
-                </p>
-                <button 
-                  onClick={() => navigate('/agregar-cita')}
-                  className="bg-white text-black font-black py-4 px-8 rounded-xl text-lg uppercase tracking-wider transition-all duration-300 hover:bg-gray-200 hover:scale-105"
-                >
-                  AGENDAR CITA
-                </button>
-              </div>
-            )}
-          </section>
-
-          {/* Vehicles Section */}
-          <section className="max-w-7xl mx-auto">
-            <div className="flex items-center justify-between mb-8">
-              <div className="text-center md:text-left">
-                <h2 className="text-3xl font-black text-white mb-2 tracking-tight">
-                  MIS VEHÍCULOS
-                </h2>
-                <p className="text-white/70">
-                  {vehiculosCliente.length > 0 
-                    ? "Administra tus vehículos registrados" 
-                    : "No tienes vehículos registrados"}
-                </p>
-              </div>
-              
-              {vehiculosCliente.length > 0 && (
-                <button 
-                  onClick={() => navigate('/agregarCarro')}
-                  className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-xl transition-all duration-300 border border-white/10 hover:border-white/20"
-                >
-                  <Plus className="w-5 h-5" />
-                  <span className="hidden md:inline">Agregar Vehículo</span>
-                  <span className="md:hidden">Agregar</span>
-                </button>
-              )}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {citasCliente.map((cita) => (
+                <CitaClienteCard 
+                  key={cita._id} 
+                  cita={cita} // Ya estábamos pasando el objeto completo
+                />
+              ))}
             </div>
-
-            {vehiculosCliente.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {vehiculosCliente.map((vehiculoId) => (
-                  <VehiculoCard 
-                    key={vehiculoId} 
-                    vehiculoId={vehiculoId} 
-                    onDelete={handleDeleteVehiculo}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-20 bg-black/40 backdrop-blur-xl rounded-2xl border border-white/10">
-                <div className="inline-block p-8 bg-white/5 rounded-full mb-6">
-                  <Car className="w-16 h-16 text-white/30" />
-                </div>
-                <h3 className="text-xl font-black text-white mb-2">
-                  NO HAY VEHÍCULOS REGISTRADOS
-                </h3>
-                <p className="text-white/70 mb-6 max-w-md mx-auto">
-                  Agrega un vehículo para comenzar a disfrutar de nuestros servicios premium
-                </p>
-                <button 
-                  onClick={() => navigate('/agregar-carro')}
-                  className="bg-white text-black font-black py-4 px-8 rounded-xl text-lg uppercase tracking-wider transition-all duration-300 hover:bg-gray-200 hover:scale-105"
-                >
-                  AGREGAR VEHÍCULO
-                </button>
-              </div>
-            )}
           </section>
 
-          {/* Move stats to footer */}
+          {/* Stats Footer */}
           <footer className="max-w-7xl mx-auto mt-16">
             <div className="bg-black/40 backdrop-blur-xl rounded-2xl border border-white/10 p-8">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6">

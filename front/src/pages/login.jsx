@@ -15,8 +15,8 @@ function Login() {
 
   const onSubmit = handleSubmit(async data => {
     const res = await login(data);
+    console.log("esto guardo", res);
     if (res.success) {
-      // Show success toast
       toast.success("¡Acceso autorizado!", {
         position: "top-center",
         autoClose: 1500,
@@ -31,14 +31,15 @@ function Login() {
           border: "1px solid #666666"
         }
       });
-
-      // Redirect based on role after toast
+      
       setTimeout(() => {
-        if (cliente?.rol) {
-          navigate('/loading', { state: { destination: '/inicioAdmin' } });
-        } else {
-          navigate('/loading', { state: { destination: '/inicioCliente' } });
-        }
+        // Pass the role data to LoadingTransition
+        navigate('/loading', { 
+          state: { 
+            userRole: res.rol,
+            isAuthenticated: true
+          } 
+        });
       }, 1500);
     }
   });

@@ -57,15 +57,11 @@ export const CarroProvider = ({ children }) => {
     // Obtener un carro por ID
     const getCarroById = useCallback(async (id) => {
         try {
-            setLoading(true);
             const res = await getCarroRequest(id);
-            setLoading(false);
             return res.data;
         } catch (error) {
             console.error("Error al obtener el vehículo:", error);
-            setError([error.response ? error.response.data : 'Error al obtener el vehículo']);
-            setLoading(false);
-            throw new Error("No se pudo obtener el vehículo");
+            throw error;
         }
     }, []);
 

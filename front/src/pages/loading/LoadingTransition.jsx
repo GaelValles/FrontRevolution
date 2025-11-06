@@ -1,19 +1,47 @@
 import React, { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Car } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import Cookies from 'js-cookie';
 
 function LoadingTransition() {
   const navigate = useNavigate();
   const location = useLocation();
-  const destination = location.state?.destination || '/inicioCliente';
-
+  const { verifyTokenRequest } = useAuth();
+  
   useEffect(() => {
-    const timer = setTimeout(() => {
-      navigate(destination, { replace: true });
-    }, 2000);
+    const checkUserRole = async () => {
+      try {
+        const token = Cookies.get('token');
+        if (!token) {
+          navigate('/login', { replace: true });
+          return;
+        }
 
-    return () => clearTimeout(timer);
-  }, [navigate, destination]);
+        const response = await verifyTokenRequest(token);
+        const userData = response.data;
+        
+        console.log('User data:', userData); // For debugging
+
+        if (!userData) {
+          navigate('/login', { replace: true });
+          return;
+        }
+
+        // Determine route based on user role
+        const destination = userData.rol === true ? '/inicio' : '/inicioCliente';
+        setTimeout(() => {
+          navigate(destination, { replace: true });
+        }, 2000);
+
+      } catch (error) {
+        console.error('Error verifying user:', error);
+        navigate('/login', { replace: true });
+      }
+    };
+
+    checkUserRole();
+  }, [navigate]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 flex items-center justify-center relative overflow-hidden">
@@ -48,7 +76,7 @@ function LoadingTransition() {
           Revolution CarWash
         </h2>
         <p className="text-lg text-white/70">
-          Preparando tu experiencia personalizada...
+          Estamos preparando tu experiencia
         </p>
 
         {/* Loading Bar */}

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 
 export const SidebarContainer = styled.div`
   width: 80px;
+  min-width: 80px; // Added to prevent shrinking
   height: 100vh;
   background: rgba(10, 10, 10, 0.95);
   position: fixed;
@@ -10,13 +11,15 @@ export const SidebarContainer = styled.div`
   top: 0;
   padding: 16px 0;
   color: white;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
   display: flex;
   flex-direction: column;
   overflow-y: auto;
   scrollbar-width: none;
   z-index: 50;
+  backdrop-filter: blur(10px);
+  transform-origin: left;
   
   &:hover {
     width: 250px;
@@ -30,44 +33,16 @@ export const SidebarContainer = styled.div`
 `;
 
 export const MenuSection = styled.div`
-  margin-bottom: ${props => props.className?.includes('mt-auto') ? '0' : '12px'};
+  margin-bottom: ${props => props.className?.includes('mt-auto') ? '0' : '8px'};
   position: relative;
+  width: 100%; // Added to ensure full width
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 
   ${SidebarContainer}:hover & {
-    margin-bottom: 24px;
-  }
-`;
-
-export const MenuLabel = styled.div`
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.3);
-  padding: 0 20px;
-  margin-bottom: 8px;
-  letter-spacing: 0.05em;
-  white-space: nowrap;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-
-  ${SidebarContainer}:hover & {
-    opacity: 1;
-  }
-`;
-
-export const Logo = styled.img`
-  width: 40px;
-  height: 40px;
-  margin: 0 auto;
-  display: block;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  filter: brightness(0.95);
-  margin-bottom: 16px;
-  object-fit: contain;
-
-  ${SidebarContainer}:hover & {
-    width: 150px;
-    height: auto;
-    margin-bottom: 24px;
+    margin-bottom: 16px;
+    align-items: stretch;
   }
 `;
 
@@ -82,7 +57,22 @@ export const MenuItem = styled(Link)`
   position: relative;
   overflow: hidden;
   height: 40px;
-  
+  width: 100%; // Added to ensure proper width
+  transform: translateX(0);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  span {
+    display: block;
+    opacity: 0;
+    transform: translateX(-10px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    margin-left: 16px;
+    font-weight: 500;
+    white-space: nowrap;
+    width: 0; // Added to hide text in collapsed state
+    overflow: hidden; // Added to prevent text overflow
+  }
+
   &:hover {
     color: white;
     background: rgba(255, 255, 255, 0.05);
@@ -105,33 +95,63 @@ export const MenuItem = styled(Link)`
     width: 20px;
     height: 20px;
     transition: all 0.3s ease;
-  }
-
-  span {
-    display: none;
-    opacity: 0;
-    transform: translateX(10px);
-    transition: all 0.3s ease;
-    margin-left: 16px;
-    font-weight: 500;
+    margin: 0; // Reset margin in collapsed state
   }
 
   ${SidebarContainer}:hover & {
     padding: 12px 24px;
     justify-content: flex-start;
-    height: auto;
+    height: 44px; // Slightly increase height in expanded state
     
     span {
-      display: block;
       opacity: 1;
       transform: translateX(0);
+      transition-delay: 0.1s;
+      width: auto; // Restore text width in expanded state
     }
 
-    &::before {
-      height: ${props => props.active ? '100%' : '0'};
-      top: 0;
-      transform: none;
+    svg {
+      transform: translateX(0);
+      transition-delay: 0.05s;
     }
+  }
+`;
+
+export const MenuLabel = styled.div`
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.3);
+  padding: 0 20px;
+  margin-bottom: 8px;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  transform: translateX(-10px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  ${SidebarContainer}:hover & {
+    opacity: 1;
+    transform: translateX(0);
+    transition-delay: 0.15s;
+  }
+`;
+
+export const Logo = styled.img`
+  width: 40px;
+  height: 40px;
+  margin: 0 auto;
+  display: block;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  filter: brightness(0.95);
+  margin-bottom: 16px;
+  object-fit: contain;
+  transform: scale(0.8);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+
+  ${SidebarContainer}:hover & {
+    transform: scale(1);
+    width: 150px;
   }
 `;
 

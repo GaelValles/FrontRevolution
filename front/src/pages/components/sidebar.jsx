@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
     AiFillCar, 
     AiOutlineSchedule, 
@@ -18,13 +18,23 @@ import {
   MenuSection,
   MenuLabel
 } from '../../styles/sidebar.styles';
+import LogoImg from '../../assets/images/logo.png'; // Updated import path
+import { useAuth } from '../../context/AuthContext';
 
 const Sidebar = ({ onHover }) => {
   const [showLogout, setShowLogout] = useState(false);
+  const { logout } = useAuth();
+  const navigate = useNavigate();
 
   const handleLogout = () => {
-    // Implementar lógica de logout
-    console.log("Logout clicked");
+    try {
+      logout();
+      navigate('/login');
+      // Opcional: Mostrar algún mensaje de éxito
+    } catch (error) {
+      console.error('Error during logout:', error);
+      // Opcional: Mostrar algún mensaje de error
+    }
   };
 
   return (
@@ -32,8 +42,8 @@ const Sidebar = ({ onHover }) => {
       onMouseEnter={() => onHover(true)}
       onMouseLeave={() => onHover(false)}
     >
-      <Link to="/" className="block mb-8">
-        <Logo src="../assets/images/logo.png" alt="Logo" />
+      <Link to="/inicioCliente" className="block mb-8">
+        <Logo src={LogoImg} alt="Logo" />
       </Link>
 
       <MenuSection>
@@ -42,7 +52,7 @@ const Sidebar = ({ onHover }) => {
           <BsCarFrontFill />
           <span>Agregar Vehículo</span>
         </MenuItem>
-        <MenuItem to="/mis-carros">
+        <MenuItem to="/misCarros">
           <AiFillCar />
           <span>Mis Vehículos</span>
         </MenuItem>
@@ -50,15 +60,15 @@ const Sidebar = ({ onHover }) => {
 
       <MenuSection>
         <MenuLabel>Citas</MenuLabel>
-        <MenuItem to="/agregar-cita">
+        <MenuItem to="/agregarCita">
           <AiOutlineSchedule />
           <span>Nueva Cita</span>
         </MenuItem>
-        <MenuItem to="/mis-citas">
+        <MenuItem to="/misCitas">
           <BsCalendarCheck />
           <span>Citas Activas</span>
         </MenuItem>
-        <MenuItem to="/historial-citas">
+        <MenuItem to="/historialCitas">
           <BsClockHistory />
           <span>Historial</span>
         </MenuItem>
@@ -66,7 +76,7 @@ const Sidebar = ({ onHover }) => {
 
       <MenuSection>
         <MenuLabel>Servicios</MenuLabel>
-        <MenuItem to="/planes-promociones">
+        <MenuItem to="/planes">
           <MdLocalOffer />
           <span>Planes y Promociones</span>
         </MenuItem>
