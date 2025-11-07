@@ -18,7 +18,7 @@ import MisCitas from "./pages/Mis/misCitas";
 
 //Planes
 import Planes from "./pages/planes";
-
+import Perfil from "./pages/perfil";
 //Contextos
 import { AuthProvider } from "./context/AuthContext";
 import { CarroProvider } from "./context/CarroContext";
@@ -49,6 +49,7 @@ function App() {
                 <Route path="/agregarCita" element={<AgregarCita />} />
 
                 <Route path="/planes" element={<Planes />} />
+                <Route path="/perfil" element={<Perfil />} />
               </Route>
               <Route path="/loading" element={<LoadingTransition />} />
             </Routes>

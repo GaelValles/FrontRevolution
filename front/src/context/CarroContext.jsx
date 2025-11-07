@@ -22,19 +22,41 @@ export const CarroProvider = ({ children }) => {
     const [error, setError] = useState([]);
     const [loading, setLoading] = useState(false);
 
+    // Validar datos del carro antes de enviar
+    const validateCarroData = (data) => {
+        const errors = {};
+        
+        if (!data.marca?.trim()) errors.marca = 'La marca es requerida';
+        if (!data.modelo?.trim()) errors.modelo = 'El modelo es requerido';
+        if (!data.año) errors.año = 'El año es requerido';
+        if (!data.placas?.trim()) errors.placas = 'Las placas son requeridas';
+        if (!data.color?.trim()) errors.color = 'El color es requerido';
+        if (!data.tipo?.trim()) errors.tipo = 'El tipo de vehículo es requerido';
+        if (!data.propietario) errors.submit = 'Error de sesión: propietario no identificado';
+
+        return {
+            isValid: Object.keys(errors).length === 0,
+            errors
+        };
+    };
+
     // Agregar un nuevo carro
     const addCarro = async (carroData) => {
         try {
-            setLoading(true);
             const res = await addCarroRequest(carroData);
-            setCarros(prev => [...prev, res.data]);
-            setLoading(false);
-            return { success: true, data: res.data };
+            if (res.data) {
+                setCarros(prev => [...prev, res.data]);
+                return { success: true, data: res.data };
+            }
+            throw new Error('No se recibieron datos del servidor');
         } catch (error) {
-            console.error('Error al agregar carro:', error.response?.data);
-            setError([error.response ? error.response.data : 'Error al agregar el vehículo']);
-            setLoading(false);
-            return { success: false, error: error.response?.data };
+            console.error('Error al agregar carro:', error);
+            return {
+                success: false,
+                error: {
+                    message: error.response?.data?.message || 'Error al registrar el vehículo'
+                }
+            };
         }
     };
 
@@ -122,53 +144,6 @@ export const CarroProvider = ({ children }) => {
             setLoading(false);
             throw error;
         }
-    };
-
-    // Validar datos del carro antes de enviar
-    const validateCarroData = (carroData) => {
-        const errors = {};
-        
-        if (!carroData.marca || carroData.marca.trim() === '') {
-            errors.marca = 'La marca es requerida';
-        }
-        
-        if (!carroData.modelo || carroData.modelo.trim() === '') {
-            errors.modelo = 'El modelo es requerido';
-        }
-        
-        if (!carroData.año || carroData.año < 1900 || carroData.año > new Date().getFullYear() + 1) {
-            errors.año = 'El año debe estar entre 1900 y ' + (new Date().getFullYear() + 1);
-        }
-        
-        if (!carroData.placas || carroData.placas.length !== 3) {
-            errors.placas = 'La terminación de las placas debe tener exactamente 3 caracteres';
-        }
-        
-        if (!carroData.color || carroData.color.trim() === '') {
-            errors.color = 'El color es requerido';
-        }
-        
-        const tiposValidos = [
-            'carro chico',
-            'carro grande',
-            'camioneta chica',
-            'camioneta grande',
-            'motocicleta chica',
-            'motocicleta grande'
-        ];
-        
-        if (!carroData.tipo || !tiposValidos.includes(carroData.tipo)) {
-            errors.tipo = 'Debe seleccionar un tipo de vehículo válido';
-        }
-        
-        if (!carroData.propietario) {
-            errors.propietario = 'El propietario es requerido';
-        }
-        
-        return {
-            isValid: Object.keys(errors).length === 0,
-            errors
-        };
     };
 
     // Limpiar errores después de un tiempo

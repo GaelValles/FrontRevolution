@@ -21,18 +21,18 @@ function LoadingTransition() {
         const response = await verifyTokenRequest(token);
         const userData = response.data;
         
-        console.log('User data:', userData); // For debugging
-
         if (!userData) {
           navigate('/login', { replace: true });
           return;
         }
 
-        // Determine route based on user role
+        // Store user data in localStorage for immediate access
+        localStorage.setItem('userData', JSON.stringify(userData));
+        
         const destination = userData.rol === true ? '/inicio' : '/inicioCliente';
         setTimeout(() => {
-          navigate(destination, { replace: true });
-        }, 2000);
+          navigate(destination, { replace: true, state: { userData } });
+        }, 1000); // Reduced timeout for better UX
 
       } catch (error) {
         console.error('Error verifying user:', error);
@@ -41,7 +41,7 @@ function LoadingTransition() {
     };
 
     checkUserRole();
-  }, [navigate]);
+  }, [navigate, verifyTokenRequest]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 flex items-center justify-center relative overflow-hidden">

@@ -7,7 +7,7 @@ import {
     AiOutlineSetting,
     AiOutlineLogout 
 } from 'react-icons/ai';
-import { BsCarFrontFill, BsCalendarCheck, BsClockHistory } from 'react-icons/bs';
+import { BsCarFrontFill, BsCalendarCheck, BsClockHistory, BsHouse } from 'react-icons/bs';
 import { MdLocalOffer } from 'react-icons/md';
 import {
   SidebarContainer,
@@ -45,6 +45,15 @@ const Sidebar = ({ onHover }) => {
       <Link to="/inicioCliente" className="block mb-8">
         <Logo src={LogoImg} alt="Logo" />
       </Link>
+
+      <MenuSection>
+        <MenuLabel>Regresar al Inicio</MenuLabel>
+        <MenuItem to="/inicioCliente">
+          <BsHouse/>
+          <span>Inicio</span>
+        </MenuItem>
+
+      </MenuSection>
 
       <MenuSection>
         <MenuLabel>Vehículos</MenuLabel>

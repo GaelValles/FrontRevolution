@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useCarro } from '../../context/CarroContext';
 import { useNavigate } from 'react-router-dom';
@@ -9,17 +9,29 @@ import Sidebar from '../components/sidebar';
 function AgregarCarro() {
   const navigate = useNavigate();
   const { cliente } = useAuth();
-  const { addCarro, validateCarroData, loading } = useCarro();
+  const { addCarro, validateCarroData } = useCarro();
   const [showSuccess, setShowSuccess] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Initialize form without propietario
   const [formData, setFormData] = useState({
     marca: '',
     modelo: '',
     año: '',
     placas: '',
     color: '',
-    tipo: '',
-    propietario: cliente?._id
+    tipo: ''
   });
+
+  // Load client data from localStorage if needed
+  useEffect(() => {
+    const cachedData = localStorage.getItem('userData');
+    if (cachedData) {
+      const userData = JSON.parse(cachedData);
+      console.log('Datos del usuario cargados:', userData);
+    }
+  }, []);
 
   const tiposVehiculo = [
     'carro chico',
@@ -30,26 +42,29 @@ function AgregarCarro() {
     'motocicleta grande'
   ];
 
-  const [errors, setErrors] = useState({});
-
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     
-    // Validación especial para placas: solo 3 caracteres
-    if (name === 'placas') {
-      const upperValue = value.toUpperCase().slice(0, 3);
-      setFormData(prev => ({
-        ...prev,
-        [name]: upperValue
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
-    }
+    let processedValue = value;
     
-    // Limpiar error del campo cuando el usuario empiece a escribir
+    // Special handling for specific fields
+    switch (name) {
+      case 'placas':
+        processedValue = value.toUpperCase().slice(0, 3);
+        break;
+      case 'año':
+        processedValue = value ? parseInt(value) : '';
+        break;
+      default:
+        processedValue = value;
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      [name]: processedValue
+    }));
+    
+    // Clear field error
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
@@ -60,31 +75,84 @@ function AgregarCarro() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Validar datos usando el contexto
-    const validation = validateCarroData(formData);
-    
-    if (!validation.isValid) {
-      setErrors(validation.errors);
+    setErrors({});
+
+    const cachedData = localStorage.getItem('userData');
+    const userData = cachedData ? JSON.parse(cachedData) : null;
+    const clienteId = cliente?._id || userData?._id;
+
+    console.log('ID del cliente:', userData.id);
+    if (!userData.id) {
+      console.error('No hay ID de cliente disponible');
+      setErrors({ 
+        submit: 'Error de conexión. Por favor, actualice la página.' 
+      });
       return;
     }
 
     try {
-      const result = await addCarro(formData);
+      setIsLoading(true);
+
+      const carroData = {
+        ...formData,
+        propietario: userData.id
+      };
+
+      console.log('Datos a enviar:', carroData);
+
+      const validation = validateCarroData(carroData);
+      if (!validation.isValid) {
+        setErrors(validation.errors);
+        return;
+      }
+
+      const result = await addCarro(carroData);
       
       if (result.success) {
         setShowSuccess(true);
+        setFormData({
+          marca: '',
+          modelo: '',
+          año: '',
+          placas: '',
+          color: '',
+          tipo: ''
+        });
+        
         setTimeout(() => {
-          navigate('/mis-carros');
+          navigate('/misCarros');
         }, 2000);
       } else {
-        setErrors({ submit: result.error?.message || 'Error al registrar el vehículo' });
+        throw new Error(result.error?.message || 'Error al registrar el vehículo');
       }
     } catch (error) {
-      console.error('Error al registrar el vehículo:', error);
-      setErrors({ submit: 'Error al registrar el vehículo' });
+      console.error('Error en el registro:', error);
+      setErrors({ 
+        submit: error.message || 'Error al registrar el vehículo. Por favor, intente nuevamente.'
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
+
+  // Modify the loading check
+  const shouldShowLoading = !cliente?._id && !localStorage.getItem('userData');
+  
+  if (shouldShowLoading) {
+    return (
+      <div className="min-h-screen flex bg-gradient-to-br from-gray-900 via-black to-gray-800 relative">
+        <Sidebar />
+        <div className="flex-1 ml-[80px] flex items-center justify-center p-4">
+          <div className="bg-black/40 backdrop-blur-xl rounded-2xl p-8 border border-white/10">
+            <div className="flex flex-col items-center">
+              <div className="w-8 h-8 border-4 border-white/20 border-t-white rounded-full animate-spin mb-4"></div>
+              <p className="text-white">Cargando datos del usuario...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex bg-gradient-to-br from-gray-900 via-black to-gray-800 relative">
@@ -225,7 +293,7 @@ function AgregarCarro() {
                     {tiposVehiculo.map((tipo) => (
                       <option 
                         key={tipo} 
-                        value={tipo}
+                        value={tipo} 
                         className="bg-gray-900"
                       >
                         {tipo.charAt(0).toUpperCase() + tipo.slice(1)}
@@ -238,31 +306,36 @@ function AgregarCarro() {
                 </div>
 
                 {errors.submit && (
-                  <div className="bg-red-500/10 border border-red-500/50 text-red-400 px-4 py-3 rounded-lg text-sm">
-                    {errors.submit}
+                  <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
+                    <p className="text-red-500 text-sm">{errors.submit}</p>
                   </div>
                 )}
 
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={isLoading}
                   className="w-full bg-white/90 hover:bg-white text-black font-black py-4 rounded-lg text-lg uppercase tracking-wider transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {loading ? 'Registrando...' : 'Registrar Vehículo'}
+                  {isLoading ? 'Registrando...' : 'Registrar Vehículo'}
                 </button>
               </form>
+
+              {showSuccess && (
+                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center">
+                  <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-8 border border-white/20 text-center">
+                    <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <h3 className="text-xl font-bold text-white mb-2">¡Vehículo Registrado!</h3>
+                    <p className="text-white/70">Tu vehículo ha sido registrado exitosamente.</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
-
-        {showSuccess && (
-          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-green-600 to-green-800 text-white px-6 py-3 rounded-lg shadow-lg border border-green-500/50 z-50 animate-pulse">
-            <div className="flex items-center">
-              <div className="w-2 h-2 bg-white rounded-full mr-2 animate-ping"></div>
-              ¡Vehículo registrado exitosamente!
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

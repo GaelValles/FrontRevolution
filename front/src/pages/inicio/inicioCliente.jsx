@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useCarro } from '../../context/CarroContext';
 import Sidebar from '../components/sidebar';
@@ -8,30 +8,49 @@ import CitaClienteCard from '../components/CitaClienteCard';
 import { Car, User, Phone, Calendar, Clock, Star, BookOpen, Plus } from 'lucide-react';
 
 const InicioCliente = () => {
-  const { cliente } = useAuth();
+  const { cliente, setCliente } = useAuth();
   const navigate = useNavigate();
-  const { deleteCarros } = useCarro(); // Add this import
+  const location = useLocation();
+  const { deleteCarros } = useCarro();
   
   const [vehiculosCliente, setVehiculosCliente] = useState([]);
   const [citasCliente, setCitasCliente] = useState([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [error, setError] = useState(null); // Add error state
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
+  // Initial data load
   useEffect(() => {
-    try {
-      if (cliente?.carros && Array.isArray(cliente.carros)) {
-        setVehiculosCliente(cliente.carros);
+    const loadInitialData = async () => {
+      try {
+        // Try to get data from navigation state first
+        const userData = location.state?.userData || JSON.parse(localStorage.getItem('userData'));
+        
+        if (userData) {
+          setCliente(userData);
+          setVehiculosCliente(userData.carros || []);
+          setCitasCliente(userData.citas?.filter(cita => 
+            cita.estado === 'programada' || cita.estado === 'en_proceso'
+          ) || []);
+        }
+      } catch (err) {
+        console.error('Error loading initial data:', err);
+        setError('Error al cargar los datos iniciales');
+      } finally {
+        setLoading(false);
       }
-      
-      if (cliente?.citas && Array.isArray(cliente.citas)) {
-        const citasActivas = cliente.citas.filter(cita => 
-          cita.estado === 'programada' || cita.estado === 'en_proceso'
-        );
-        setCitasCliente(citasActivas);
-      }
-    } catch (err) {
-      setError('Error al cargar los datos');
-      console.error('Error en useEffect:', err);
+    };
+
+    loadInitialData();
+  }, [setCliente, location.state]);
+
+  // Update data when client changes
+  useEffect(() => {
+    if (cliente) {
+      setVehiculosCliente(cliente.carros || []);
+      setCitasCliente(cliente.citas?.filter(cita => 
+        cita.estado === 'programada' || cita.estado === 'en_proceso'
+      ) || []);
     }
   }, [cliente]);
 
@@ -60,6 +79,18 @@ const InicioCliente = () => {
           >
             Intentar nuevamente
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 flex items-center justify-center">
+        <div className="text-white text-center">
+          <div className="w-16 h-16 border-4 border-white/20 border-t-white rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-white/70">Cargando información...</p>
         </div>
       </div>
     );
@@ -168,12 +199,7 @@ const InicioCliente = () => {
           <footer className="max-w-7xl mx-auto mt-16">
             <div className="bg-black/40 backdrop-blur-xl rounded-2xl border border-white/10 p-8">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                <div className="text-center p-4 bg-white/5 rounded-xl border border-white/10">
-                  <User className="w-6 h-6 text-white/60 mx-auto mb-2" />
-                  <div className="text-white/60 text-xs uppercase tracking-wider">CLIENTE DESDE</div>
-                  <div className="text-white font-bold">2024</div>
-                </div>
-                
+  
                 <div className="text-center p-4 bg-white/5 rounded-xl border border-white/10">
                   <Car className="w-6 h-6 text-white/60 mx-auto mb-2" />
                   <div className="text-white/60 text-xs uppercase tracking-wider">VEHÍCULOS</div>
@@ -186,11 +212,6 @@ const InicioCliente = () => {
                   <div className="text-white font-bold">{citasCliente?.length || 0}</div>
                 </div>
 
-                <div className="text-center p-4 bg-white/5 rounded-xl border border-white/10">
-                  <Star className="w-6 h-6 text-white/60 mx-auto mb-2" />
-                  <div className="text-white/60 text-xs uppercase tracking-wider">MEMBRESÍA</div>
-                  <div className="text-white font-bold">Premium</div>
-                </div>
               </div>
             </div>
           </footer>

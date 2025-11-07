@@ -134,35 +134,46 @@ export const AuthProvider = ({ children }) => {
     }, [error]);
 
     useEffect(() => {
-        async function checkLogin (){
+        async function checkLogin() {
             const cookies = Cookies.get();
+            const cachedData = localStorage.getItem('userData');
+            
+            if (cachedData) {
+              const userData = JSON.parse(cachedData);
+              setCliente(userData);
+              setIsAuth(true);
+            }
             
             if (!cookies.token) {
-                setIsAuth(false);
-                setLoading(false);
-                return setCliente(null);
+              setIsAuth(false);
+              setLoading(false);
+              localStorage.removeItem('userData');
+              return setCliente(null);
             }
                 
             try {
-                const res = await verifyTokenRequest(cookies.token);
-                console.log(res);
-                if (!res.data) {
-                    setIsAuth(false);
-                    setLoading(false);
-                    return;
-                }
-
-                setIsAuth(true);
-                setCliente(res.data);
-                setLoading(false);
-            } catch (error) {
-                console.error('Token verification failed:', error);
+              const res = await verifyTokenRequest(cookies.token);
+              if (!res.data) {
                 setIsAuth(false);
-                setCliente(null);
                 setLoading(false);
+                localStorage.removeItem('userData');
+                return;
+              }
+
+              setIsAuth(true);
+              setCliente(res.data);
+              localStorage.setItem('userData', JSON.stringify(res.data));
+              setLoading(false);
+            } catch (error) {
+              console.error('Token verification failed:', error);
+              setIsAuth(false);
+              setCliente(null);
+              localStorage.removeItem('userData');
+              setLoading(false);
             }
-        };
-        checkLogin();
+          }
+
+          checkLogin();
     }, []);
 
     return (

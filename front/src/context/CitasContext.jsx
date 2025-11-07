@@ -155,6 +155,28 @@ export const CitasProvider = ({ children }) => {
         if (!citaData.carro) {
             errors.carro = 'Debe seleccionar un vehículo';
         }
+
+        if (!citaData.cliente) {
+            errors.cliente = 'Error: No se ha identificado el cliente';
+        }
+
+        // Validar que las fechas sean válidas
+        if (citaData.fechaInicio && citaData.fechaFin) {
+            const inicio = new Date(citaData.fechaInicio);
+            const fin = new Date(citaData.fechaFin);
+            
+            if (isNaN(inicio.getTime())) {
+              errors.fechaInicio = 'Fecha de inicio inválida';
+            }
+            
+            if (isNaN(fin.getTime())) {
+              errors.fechaFin = 'Fecha de fin inválida';
+            }
+            
+            if (fin <= inicio) {
+              errors.fechaFin = 'La fecha de fin debe ser posterior a la fecha de inicio';
+            }
+        }
         
         return {
             isValid: Object.keys(errors).length === 0,
