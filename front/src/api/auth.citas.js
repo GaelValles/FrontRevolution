@@ -40,3 +40,9 @@ export const deleteCitaRequest = (id) =>
             'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
     });
+
+export const getAllCitasRequest = () => axios.get('/citas/getAllCitas');
+export const updateCitaEstadoRequest = async (id, estado) => {
+    console.log('📤 Enviando al servidor:', { id, estado });
+    return axios.put(`/citas/updateEstado/${id}`, { estado });
+};

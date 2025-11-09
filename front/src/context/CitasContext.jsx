@@ -6,7 +6,9 @@ import {
     getCitasByClienteRequest,
     getCitasByCarroRequest,
     updateCitaRequest,
-    deleteCitaRequest
+    deleteCitaRequest,
+    getAllCitasRequest,
+    updateCitaEstadoRequest
 } from '../api/auth.citas';
 
 export const CitasContext = createContext();
@@ -136,6 +138,30 @@ export const CitasProvider = ({ children }) => {
         }
     };
 
+    // Obtener todas las citas (sin filtros)
+    const getAllCitas = async () => {
+        try {
+            const response = await getAllCitasRequest();
+            return response.data;
+        } catch (error) {
+            console.error('Error al obtener citas:', error);
+            throw error;
+        }
+    };
+
+    // Actualizar estado de una cita
+    const updateCitaEstado = async (citaId, nuevoEstado) => {
+        try {
+            console.log('Context recibió:', { citaId, nuevoEstado });
+            const result = await updateCitaEstadoRequest(citaId, nuevoEstado);
+            console.log('Respuesta del servidor:', result.data);
+            return result.data;
+        } catch (error) {
+            console.error(' Error en updateCitaEstado:', error.response?.data || error.message);
+            throw error;
+        }
+    };
+
     // Validar datos de la cita
     const validateCitaData = (citaData) => {
         const errors = {};
@@ -206,6 +232,8 @@ export const CitasProvider = ({ children }) => {
             getCitasByCarro,
             updateCita,
             deleteCita,
+            getAllCitas,
+            updateCitaEstado,
             validateCitaData
         }}>
             {children}
