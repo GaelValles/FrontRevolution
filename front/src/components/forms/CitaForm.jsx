@@ -1,226 +1,168 @@
-import { tiposServicio, costosPorServicio } from '../../constants/servicios';
-import { getMinDateTime } from '../../utils/dateUtils';
-import { useDias } from '../../context/DiasContext';
-import { useAuth } from '../../context/AuthContext'; // Add this import
-import { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
+import { tiposServicio as tiposServicioDefault, costosPorServicio } from '../../constants/servicios';
 
-// helper: Date -> "YYYY-MM-DDTHH:MM" (local) and normalize min to step
-const toDateTimeLocalString = (date) => {
-  if (!(date instanceof Date) || isNaN(date.getTime())) return '';
-  const pad = (n) => String(n).padStart(2, '0');
-  const y = date.getFullYear();
-  const m = pad(date.getMonth() + 1);
-  const d = pad(date.getDate());
-  const hh = pad(date.getHours());
-  const mm = pad(date.getMinutes());
-  return `${y}-${m}-${d}T${hh}:${mm}`;
-};
+export const crearCita = async (req, res) => {
+  try {
+    const { fechaInicio, tipoServicio, costo, carro, informacionAdicional } = req.body;
 
-const normalizeMinString = (minStr, stepMinutes = 15) => {
-  if (!minStr) return '';
-  const dt = new Date(minStr);
-  if (isNaN(dt.getTime())) return '';
-  // round minutes UP to nearest step to ensure min aligns with step grid
-  const min = dt.getMinutes();
-  const rem = min % stepMinutes;
-  if (rem !== 0) {
-    dt.setMinutes(min + (stepMinutes - rem), 0, 0);
-  } else {
-    dt.setSeconds(0, 0);
-  }
-  return toDateTimeLocalString(dt);
-};
+    // Validar ObjectId y fecha
+    if (!mongoose.Types.ObjectId.isValid(carro)) {
+      return res.status(400).json({ message: "ID de carro inválido" });
+    }
+    const fechaObj = new Date(fechaInicio);
+    if (isNaN(fechaObj.getTime())) {
+      return res.status(400).json({ message: "Fecha inválida" });
+    }
 
-export const CitaForm = ({ formData, errors, loading, handleInputChange, handleSubmit, vehiculosCliente }) => {
-  const { diasInhabiles } = useDias();
-  const { cliente } = useAuth(); // Get the logged-in client
-  const [timeError, setTimeError] = useState('');
+    // Owner id desde token (soporta id o _id)
+    const ownerId = req.admin?.id || req.admin?._id;
 
-  // compute safe normalized value/min for input[type="datetime-local"]
-  const stepMinutes = 15;
-  const inputValue = (() => {
-    if (!formData?.fechaInicio) return '';
-    const dt = new Date(formData.fechaInicio);
-    if (isNaN(dt.getTime())) return String(formData.fechaInicio);
-    return toDateTimeLocalString(dt);
-  })();
-  const safeMin = normalizeMinString(getMinDateTime(), stepMinutes);
+    // Verificar que el carro existe y pertenece al usuario
+    const carroExiste = await Carros.findOne({ _id: carro, propietario: ownerId });
+    if (!carroExiste) {
+      return res.status(404).json({ message: "Carro no encontrado" });
+    }
 
-  // Set client ID in form data when component mounts
-  useEffect(() => {
-    if (cliente?._id) {
-      handleInputChange({
-        target: {
-          name: 'cliente',
-          value: cliente._id
-        }
+    // Ventana de tolerancia (ej. 15 minutos) para evitar solapamientos
+    const TOLERANCE_MS = 15 * 60 * 1000;
+    const windowStart = new Date(fechaObj.getTime() - TOLERANCE_MS);
+    const windowEnd = new Date(fechaObj.getTime() + TOLERANCE_MS);
+
+    // Buscar conflictos SOLO para el MISMO carro y sólo estados activos (no cancelada/completada)
+    const conflicto = await Citas.findOne({
+      carro: carro,
+      fechaInicio: { $gte: windowStart, $lte: windowEnd },
+      estado: { $nin: ['cancelada', 'completada'] }
+    });
+
+    if (conflicto) {
+      return res.status(400).json({
+        message: "Ya existe una cita programada para ese vehículo en un horario muy cercano"
       });
-      console.log('Cliente ID set:', cliente._id); // Debug log
-    }
-  }, [cliente]);
-
-  // Función para deshabilitar fechas
-  const isDateDisabled = (date) => {
-    return diasInhabiles.some(dia => 
-      new Date(dia.fecha).toDateString() === new Date(date).toDateString()
-    );
-  };
-
-  // Validate datetime-local input: forbid días inhábiles y validar hora entre 09:00 - 17:00
-  const handleFechaChange = (e) => {
-    const value = e.target.value; // formato "YYYY-MM-DDTHH:MM"
-    if (!value) {
-      setTimeError('');
-      handleInputChange(e);
-      return;
     }
 
-    const [datePart, timePart = '00:00'] = value.split('T'); // asegurar timePart
-    const [y, m, d] = datePart.split('-').map(Number);
-    const [hh, mm] = timePart.split(':').map(Number);
+    // Crear y guardar cita (fecha enviada desde frontend debe ser ISO)
+    const nuevaCita = new Citas({
+      fechaInicio: fechaObj,
+      tipoServicio,
+      costo,
+      carro,
+      cliente: ownerId,
+      informacionAdicional,
+      estado: 'programada'
+    });
 
-    // Crear Date en hora local para evitar desplazamientos por zona horaria
-    const selectedDate = new Date(y, (m || 1) - 1, d || 1, hh || 0, mm || 0, 0, 0);
-    if (isNaN(selectedDate.getTime())) {
-      setTimeError('Fecha inválida');
-      return;
-    }
+    const citaGuardada = await nuevaCita.save();
 
-    // validar solo contra días inhábiles (comparando fecha local)
-    const isDisabled = diasInhabiles.some(dia =>
-      new Date(dia.fecha).toLocaleDateString() === selectedDate.toLocaleDateString()
-    );
-    if (isDisabled) {
-      setTimeError('La fecha seleccionada está marcada como inhábil');
-      return;
-    }
+    // Actualizar array de citas del cliente (si existe)
+    await Admin.findByIdAndUpdate(ownerId, { $push: { citas: citaGuardada._id } });
 
-    // validar rango horario: 09:00 (inclusive) - 17:00 (inclusive)
-    const totalMinutes = (hh || 0) * 60 + (mm || 0);
-    const minMinutes = 9 * 60;   // 09:00
-    const maxMinutes = 17 * 60;  // 17:00
-    if (totalMinutes < minMinutes || totalMinutes > maxMinutes) {
-      setTimeError('Selecciona una hora entre 09:00 y 17:00');
-      return;
-    }
+    const citaCompleta = await Citas.findById(citaGuardada._id)
+      .populate('carro', 'marca modelo año color placas tipo')
+      .populate('cliente', 'nombre correo telefono');
 
-    // válido: limpiar error y propagar cambio
-    setTimeError('');
-    handleInputChange(e);
-  };
+    return res.json(citaCompleta);
+  } catch (error) {
+    console.error('Error en crearCita:', error);
+    return res.status(500).json({ message: "Error al crear la cita", error: error.message });
+  }
+};
+
+export const CitaForm = ({
+  formData = {},
+  errors = {},
+  loading = false,
+  handleInputChange,
+  handleSubmit,
+  vehiculosCliente = [],
+  tiposServicio = [],
+  costosPorServicio: costosProp = {}
+}) => {
+  // No hacer parseo complejo aquí: el hook padre/hook de formulario se encarga
+  useEffect(() => {
+    // debug mínimo en desarrollo
+    // console.log('CitaForm mounted, fechaInicio:', formData.fechaInicio);
+  }, [formData.fechaInicio]);
+
+  // elegir lista de servicios: prop tiene preferencia, si no viene usamos el default importado
+  const serviciosOptions = Array.isArray(tiposServicio) && tiposServicio.length ? tiposServicio : tiposServicioDefault;
+  const costos = Object.keys(costosProp || {}).length ? costosProp : costosPorServicio;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Selección de vehículo */}
+    <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="block text-white/60 text-sm mb-2">Vehículo</label>
+        <label className="block text-sm text-white/70 mb-1">Fecha y Hora</label>
+        <input
+          type="datetime-local"
+          name="fechaInicio"
+          value={formData.fechaInicio || ''}
+          onChange={handleInputChange}
+          className={`w-full px-3 py-2 rounded bg-white/5 text-white ${errors.fechaInicio ? 'border-red-500' : 'border-white/30'}`}
+        />
+        {errors.fechaInicio && <p className="text-red-400 text-sm mt-1">{errors.fechaInicio}</p>}
+        {/* Mensaje de submit / servidor */}
+        {errors.submit && <p className="text-red-400 text-sm mt-2">{errors.submit}</p>}
+      </div>
+
+      <div>
+        <label className="block text-sm text-white/70 mb-1">Tipo de servicio</label>
+        <select
+          name="tipoServicio"
+          value={formData.tipoServicio || ''}
+          onChange={handleInputChange}
+          className="w-full px-3 py-2 rounded bg-white/5 text-white"
+        >
+          <option value="">Selecciona</option>
+          {serviciosOptions.map(ts => <option key={ts} value={ts}>{ts}</option>)}
+        </select>
+        {errors.tipoServicio && <p className="text-red-400 text-sm mt-1">{errors.tipoServicio}</p>}
+      </div>
+
+      <div>
+        <label className="block text-sm text-white/70 mb-1">Vehículo</label>
         <select
           name="carro"
           value={formData.carro || ''}
           onChange={handleInputChange}
-          className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-lg text-white focus:outline-none focus:border-white/50 appearance-none"
+          className="w-full px-3 py-2 rounded bg-white/5 text-white"
         >
           <option value="">Selecciona tu vehículo</option>
-          {vehiculosCliente.map((carro) => (
-            <option 
-              key={carro._id} 
-              value={carro._id}
-              className="bg-gray-900"
-            >
-              {`${carro.marca} ${carro.modelo} - ${carro.placas}`}
+          {vehiculosCliente.map(v => (
+            <option key={v._id} value={v._id}>
+              {v.marca} {v.modelo} — {v.placas}
             </option>
           ))}
         </select>
-        {errors.carro && (
-          <span className="text-red-400 text-xs mt-1 block">{errors.carro}</span>
-        )}
+        {errors.carro && <p className="text-red-400 text-sm mt-1">{errors.carro}</p>}
       </div>
 
-      {/* Tipo de servicio */}
       <div>
-        <label className="block text-white/60 text-sm mb-2">Tipo de Servicio</label>
-        <select
-          name="tipoServicio"
-          value={formData.tipoServicio}
-          onChange={handleInputChange}
-          className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-lg text-white focus:outline-none focus:border-white/50 appearance-none"
-        >
-          <option value="" className="bg-gray-900">Selecciona el servicio</option>
-          {tiposServicio.map((tipo) => (
-            <option 
-              key={tipo} 
-              value={tipo}
-              className="bg-gray-900"
-            >
-              {tipo} - ${costosPorServicio[tipo]}
-            </option>
-          ))}
-        </select>
-        {errors.tipoServicio && (
-          <span className="text-red-400 text-xs mt-1 block">{errors.tipoServicio}</span>
-        )}
-      </div>
-
-      {/* Fecha y hora de inicio */}
-      <div>
-        <label className="block text-white/60 text-sm mb-2">Fecha y Hora</label>
+        <label className="block text-sm text-white/70 mb-1">Costo</label>
         <input
-          type="datetime-local"
-          name="fechaInicio"
-          value={inputValue}
-          onChange={handleFechaChange}
-          min={safeMin} /* normalized min aligned to step */
-          step={stepMinutes * 60} /* 15-minute steps in seconds */
-          className={`w-full px-4 py-3 bg-white/10 border rounded-lg text-white focus:outline-none focus:ring-2 $$
-            {(errors.fechaInicio || timeError) 
-              ? 'border-red-500 focus:border-red-500 focus:ring-red-500/50' 
-              : 'border-white/30 focus:border-white/50 focus:ring-white/50'
-          }`}
+          name="costo"
+          readOnly
+          value={formData.costo || (formData.tipoServicio ? (costos[formData.tipoServicio] ?? '') : '')}
+          className="w-full px-3 py-2 rounded bg-white/5 text-white"
         />
-        <div className="flex items-center justify-between mt-2">
-          <div className="text-xs text-white/50">
-            Disponible: 09:00 - 17:00
-          </div>
-        </div>
-        {(errors.fechaInicio || timeError) && (
-          <span className="text-red-400 text-xs mt-1 block">
-            {timeError || errors.fechaInicio}
-          </span>
-        )}
-        {diasInhabiles.length > 0 && (
-          <p className="text-white/50 text-xs mt-2">
-            Nota: Las fechas marcadas como inhábiles no están disponibles para agendar citas
-          </p>
-        )}
       </div>
 
-      {/* Información adicional */}
       <div>
-        <label className="block text-white/60 text-sm mb-2">Información Adicional</label>
+        <label className="block text-sm text-white/70 mb-1">Información adicional</label>
         <textarea
           name="informacionAdicional"
-          value={formData.informacionAdicional}
+          value={formData.informacionAdicional || ''}
           onChange={handleInputChange}
-          placeholder="Detalles adicionales sobre el servicio..."
-          className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-lg text-white focus:outline-none focus:border-white/50 min-h-[100px] resize-none"
+          className="w-full px-3 py-2 rounded bg-white/5 text-white"
         />
       </div>
 
-      {/* Error general */}
-      {errors.submit && (
-        <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
-          <p className="text-red-500 text-sm">{errors.submit}</p>
-        </div>
-      )}
-
-      {/* Botón de submit */}
-      <button
-        type="submit"
-        disabled={loading || Boolean(timeError)}
-        className="w-full bg-white/90 hover:bg-white text-black font-black py-4 rounded-lg text-lg uppercase tracking-wider transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {loading ? 'Programando...' : 'Programar Cita'}
-      </button>
+      <div>
+        <button type="submit" disabled={loading} className="px-4 py-2 rounded bg-blue-600 text-white">
+          {loading ? 'Guardando...' : 'Agendar cita'}
+        </button>
+      </div>
     </form>
   );
 };
+
+export default CitaForm;

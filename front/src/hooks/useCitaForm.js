@@ -209,7 +209,7 @@ export const useCitaForm = (navigate) => {
       return;
     }
 
-    // Prepare payload: convert fechaInicio to ISO (server-friendly)
+    // Prepare payload: convert fechaInicio to timestamp (ms) to avoid ISO/timezone ambiguity
     let payload = { ...formData, cliente: clienteId };
     if (payload.fechaInicio) {
       const parsed = parseLocalDate(payload.fechaInicio);
@@ -217,9 +217,10 @@ export const useCitaForm = (navigate) => {
         setErrors({ fechaInicio: 'Formato de fecha inválido' });
         return;
       }
-      payload.fechaInicio = parsed.toISOString();
+      // <-- send numeric timestamp (ms) instead of ISO string
+      payload.fechaInicio = parsed.getTime();
     }
-
+    
     try {
       setLoading(true);
       const result = await addCita(payload);
