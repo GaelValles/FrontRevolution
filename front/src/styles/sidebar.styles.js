@@ -1,203 +1,102 @@
 import styled from 'styled-components';
 import { Link } from 'react-router-dom';
 
-export const SidebarContainer = styled.div`
-  width: 80px;
-  min-width: 80px; // Added to prevent shrinking
-  height: 100vh;
-  background: rgba(10, 10, 10, 0.95);
+export const SidebarContainer = styled.nav`
   position: fixed;
   left: 0;
   top: 0;
-  padding: 16px 0;
-  color: white;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-  scrollbar-width: none;
+  bottom: 0;
+  /* open width increased so labels fit */
+  width: ${({ isOpen }) => (isOpen ? '300px' : '72px')};
+  padding: ${({ isOpen }) => (isOpen ? '2rem' : '1rem 0.5rem')};
+  transition: width 220ms cubic-bezier(.2,.9,.2,1), padding 220ms ease, background 200ms ease;
   z-index: 50;
-  backdrop-filter: blur(10px);
-  transform-origin: left;
-  
-  &:hover {
-    width: 250px;
-    background: rgba(15, 15, 15, 0.98);
-    padding: 20px 0;
-  }
-
-  &::-webkit-scrollbar {
-    display: none;
-  }
+  overflow-y: auto;
+  height: 100vh;
+  -webkit-overflow-scrolling: touch;
+  background: ${({ isDarkMode }) =>
+    isDarkMode ? 'rgba(9, 12, 20, 0.98)' : 'rgba(255, 255, 255, 0.98)'};
+  border-right: 1px solid
+    ${({ isDarkMode }) => (isDarkMode ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)')};
+  box-shadow: ${({ isDarkMode }) =>
+    isDarkMode ? '0 2px 12px rgba(0,0,0,0.6)' : '0 2px 12px rgba(16,24,40,0.04)'};
 `;
 
-export const MenuSection = styled.div`
-  margin-bottom: ${props => props.className?.includes('mt-auto') ? '0' : '8px'};
-  position: relative;
-  width: 100%; // Added to ensure full width
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-
-  ${SidebarContainer}:hover & {
-    margin-bottom: 16px;
-    align-items: stretch;
+/* custom thin scrollbar that matches the style (modern browsers) */
+export const ScrollbarStyles = styled.div`
+  ::-webkit-scrollbar {
+    width: 6px;
   }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: ${({ isDarkMode }) => (isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(16,24,40,0.08)')};
+    border-radius: 999px;
+  }
+  scrollbar-width: thin;
+  scrollbar-color: ${({ isDarkMode }) => (isDarkMode ? 'rgba(255,255,255,0.08) transparent' : 'rgba(16,24,40,0.08) transparent')};
 `;
 
+export const Logo = styled.img`
+  height: 40px;
+  width: auto;
+  margin: 0 auto;
+`;
+
+// MenuItem ahora respeta isOpen para centrar iconos cuando está cerrado
 export const MenuItem = styled(Link)`
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 10px;
-  color: ${props => props.active ? '#fff' : 'rgba(255, 255, 255, 0.7)'};
-  text-decoration: none;
-  transition: all 0.2s ease;
-  position: relative;
+  gap: ${({ isOpen }) => (isOpen ? '1rem' : '0')};
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  transition: all 180ms ease;
+  margin-bottom: 0.25rem;
+  color: ${({ isDarkMode }) => (isDarkMode ? 'rgba(255, 255, 255, 0.92)' : 'rgba(10, 10, 10, 0.88)')};
+  justify-content: ${({ isOpen }) => (isOpen ? 'flex-start' : 'center')};
+  white-space: nowrap;
   overflow: hidden;
-  height: 40px;
-  width: 100%; // Added to ensure proper width
-  transform: translateX(0);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
-  span {
-    display: block;
-    opacity: 0;
-    transform: translateX(-10px);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    margin-left: 16px;
-    font-weight: 500;
-    white-space: nowrap;
-    width: 0; // Added to hide text in collapsed state
-    overflow: hidden; // Added to prevent text overflow
-  }
 
   &:hover {
-    color: white;
-    background: rgba(255, 255, 255, 0.05);
-  }
-
-  &::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 50%;
-    height: ${props => props.active ? '20px' : '0'};
-    width: 3px;
-    background: ${props => props.active ? 'white' : 'transparent'};
-    transition: all 0.2s ease;
-    transform: translateY(-50%);
+    background: ${({ isDarkMode }) =>
+      isDarkMode ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)'};
+    color: ${({ isDarkMode }) => (isDarkMode ? '#ffffff' : '#000000')};
   }
 
   svg {
-    min-width: 20px;
-    width: 20px;
-    height: 20px;
-    transition: all 0.3s ease;
-    margin: 0; // Reset margin in collapsed state
+    width: 1.25rem;
+    height: 1.25rem;
+    opacity: ${({ isDarkMode }) => (isDarkMode ? '0.95' : '0.9')};
+    flex-shrink: 0;
   }
 
-  ${SidebarContainer}:hover & {
-    padding: 12px 24px;
-    justify-content: flex-start;
-    height: 44px; // Slightly increase height in expanded state
-    
-    span {
-      opacity: 1;
-      transform: translateX(0);
-      transition-delay: 0.1s;
-      width: auto; // Restore text width in expanded state
-    }
-
-    svg {
-      transform: translateX(0);
-      transition-delay: 0.05s;
-    }
+  /* show text only when open, with ellipsis and space to fit */
+  span {
+    display: ${({ isOpen }) => (isOpen ? 'inline-block' : 'none')};
+    max-width: ${({ isOpen }) => (isOpen ? '195px' : '0')};
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: opacity 180ms ease, transform 180ms ease;
   }
 `;
 
 export const MenuLabel = styled.div`
   font-size: 0.75rem;
+  font-weight: 600;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.3);
-  padding: 0 20px;
-  margin-bottom: 8px;
   letter-spacing: 0.05em;
-  white-space: nowrap;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  transform: translateX(-10px);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
-  ${SidebarContainer}:hover & {
-    opacity: 1;
-    transform: translateX(0);
-    transition-delay: 0.15s;
-  }
+  margin: 1.5rem 0 0.75rem;
+  padding-left: ${({ isOpen }) => (isOpen ? '0.75rem' : '0')};
+  color: ${({ isDarkMode }) => (isDarkMode ? 'rgba(255, 255, 255, 0.45)' : 'rgba(0, 0, 0, 0.45)')};
+  display: ${({ isOpen }) => (isOpen ? 'block' : 'none')};
 `;
 
-export const Logo = styled.img`
-  width: 40px;
-  height: 40px;
-  margin: 0 auto;
-  display: block;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  filter: brightness(0.95);
-  margin-bottom: 16px;
-  object-fit: contain;
-  transform: scale(0.8);
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-
-  ${SidebarContainer}:hover & {
-    transform: scale(1);
-    width: 150px;
-  }
+export const MenuSection = styled.div`
+  margin-bottom: 1rem;
 `;
 
 export const ConfigButton = styled.div`
   position: relative;
-`;
-
-export const LogoutButton = styled.div`
-  padding: 12px 16px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  color: #ff4444;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-  overflow: hidden;
-  
-  &:hover {
-    background: rgba(255, 68, 68, 0.1);
-  }
-
-  svg {
-    min-width: 20px;
-    font-size: 20px;
-    margin: 0 auto;
-    transition: margin 0.3s ease;
-  }
-
-  span {
-    opacity: 0;
-    transform: translateX(10px);
-    transition: all 0.3s ease;
-    margin-left: 16px;
-    font-weight: 500;
-  }
-
-  ${SidebarContainer}:hover & {
-    padding: 12px 24px;
-    
-    svg {
-      margin: 0;
-    }
-
-    span {
-      opacity: 1;
-      transform: translateX(0);
-    }
-  }
 `;

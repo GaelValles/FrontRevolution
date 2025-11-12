@@ -1,48 +1,39 @@
 import axios from './axios';
 
-export const addCitaRequest = (cita) => axios.post(`/citas/agregarCita`, cita);
+const getAuthHeaders = () => ({
+  Authorization: `Bearer ${localStorage.getItem('token') || ''}`
+});
+
+export const addCitaRequest = (cita) =>
+  axios.post('/citas/agregarCita', cita, { headers: getAuthHeaders() });
 
 // Get all appointments
-export const getCitasRequest = () => axios.get(`/citas/verCitas`);
+export const getCitasRequest = () =>
+  axios.get('/citas/verCitas', { headers: getAuthHeaders() });
 
 // Get appointment by ID
-export const getCitaRequest = (id) => 
-    axios.get(`${API}/citas/verCita/${id}`, {
-        headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-    });
+export const getCitaRequest = (id) =>
+  axios.get(`/citas/verCita/${id}`, { headers: getAuthHeaders() });
 
 // Get appointments by client ID
-export const getCitasByClienteRequest = (clienteId) => axios.get(`/citas/porCliente/${clienteId}`);
+export const getCitasByClienteRequest = (clienteId) =>
+  axios.get(`/citas/porCliente/${clienteId}`, { headers: getAuthHeaders() });
 
 // Get appointments by car ID
-export const getCitasByCarroRequest = (carroId) => 
-    axios.get(`${API}/citas/porCarro/${carroId}`, {
-        headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-    });
+export const getCitasByCarroRequest = (carroId) =>
+  axios.get(`/citas/porCarro/${carroId}`, { headers: getAuthHeaders() });
 
 // Update appointment
-export const updateCitaRequest = (id, cita) => 
-    axios.put(`${API}/citas/actualizarCita/${id}`, cita, {
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-    });
+export const updateCitaRequest = (id, cita) =>
+  axios.put(`/citas/actualizarCita/${id}`, cita, {
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() }
+  });
 
 // Delete appointment
-export const deleteCitaRequest = (id) => 
-    axios.delete(`${API}/citas/eliminarCita/${id}`, {
-        headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-    });
+export const deleteCitaRequest = (id) =>
+  axios.delete(`/citas/eliminarCita/${id}`, { headers: getAuthHeaders() });
 
-export const getAllCitasRequest = () => axios.get('/citas/getAllCitas');
-export const updateCitaEstadoRequest = async (id, estado) => {
-    console.log('📤 Enviando al servidor:', { id, estado });
-    return axios.put(`/citas/updateEstado/${id}`, { estado });
-};
+export const getAllCitasRequest = () =>
+  axios.get('/citas/getAllCitas', { headers: getAuthHeaders() });
+export const updateCitaEstadoRequest = (id, estado) =>
+  axios.put(`/citas/updateEstado/${id}`, { estado }, { headers: getAuthHeaders() });

@@ -1,9 +1,56 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Calendar, Clock, Car, User, MapPin } from 'lucide-react';
+import { useTheme } from '../../context/ThemeContext'; // Updated import
+import { useCarro } from '../../context/CarroContext'; // nuevo import para obtener datos del carro
 
 const CitaClienteCard = ({ cita }) => {
+  const { isDarkMode } = useTheme();
+  const { getCarroById } = useCarro(); // asumo este método existe en el contexto
+  const [carroData, setCarroData] = useState(null);
+  const [loadingCarro, setLoadingCarro] = useState(false);
+
+  console.log('Cita data:', cita);
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchCarro = async () => {
+      if (!cita) return;
+      // cita.carro puede ser ID (string) o objeto; manejar ambos casos
+      const carroId = typeof cita.carro === 'string' ? cita.carro : cita.carro?._id;
+      // si ya es objeto, úsalo directamente
+      if (!carroId && typeof cita.carro === 'object') {
+        setCarroData(cita.carro);
+        return;
+      }
+      if (!carroId) {
+        setCarroData(null);
+        return;
+      }
+
+      try {
+        setLoadingCarro(true);
+        const result = await getCarroById(carroId);
+        if (mounted) setCarroData(result || null);
+      } catch (error) {
+        console.error('Error fetching carro:', error);
+        if (mounted) setCarroData(null);
+      } finally {
+        if (mounted) setLoadingCarro(false);
+      }
+    };
+
+    fetchCarro();
+    return () => {
+      mounted = false;
+    };
+  }, [cita, getCarroById]);
+
+  // usar carroData si está disponible, si no fallback seguro
+  const carro = carroData ?? (typeof cita?.carro === 'object' ? cita.carro : null);
+
   // Función para formatear la fecha
   const formatearFecha = (fecha) => {
+    if (!fecha) return 'No especificada';
     return new Date(fecha).toLocaleDateString('es-MX', { 
       weekday: 'short', 
       month: 'short', 
@@ -11,16 +58,9 @@ const CitaClienteCard = ({ cita }) => {
     });
   };
 
-  // Función para calcular la duración
-  const calcularDuracion = (fechaInicio, fechaFin) => {
-    const inicio = new Date(fechaInicio);
-    const fin = new Date(fechaFin);
-    const duracionMinutos = Math.round((fin - inicio) / (1000 * 60));
-    return `${duracionMinutos} minutos`;
-  };
-
   // Función para obtener la hora
   const obtenerHora = (fecha) => {
+    if (!fecha) return '--:--';
     return new Date(fecha).toLocaleTimeString('es-MX', { 
       hour: '2-digit', 
       minute: '2-digit' 
@@ -28,47 +68,71 @@ const CitaClienteCard = ({ cita }) => {
   };
 
   return (
-    <div className="group relative bg-black/80 backdrop-blur-xl border border-white/20 rounded-3xl p-8 hover:border-white/40 hover:shadow-white/10 hover:shadow-2xl transition-all duration-500 hover:scale-105 min-h-[400px]">
+    <div className={`${
+      isDarkMode 
+        ? 'bg-black/40 border-white/10' 
+        : 'bg-white/80 border-gray-200'
+    } group relative backdrop-blur-xl rounded-2xl border p-6 transition-all duration-500 hover:scale-105 min-h-[400px]`}>
       {/* Servicio principal */}
       <div className="mb-6 text-center">
-        <h2 className="text-white font-black text-3xl tracking-wide mb-2">
-          {cita.tipoServicio}
+        <h2 className={`${
+          isDarkMode ? 'text-white' : 'text-gray-900'
+        } font-black text-3xl tracking-wide mb-2`}>
+          {cita?.tipoServicio || 'Servicio'}
         </h2>
-        <div className="h-0.5 w-20 bg-gradient-to-r from-transparent via-white to-transparent mx-auto"></div>
+        <div className={`h-0.5 w-20 bg-gradient-to-r mx-auto ${isDarkMode ? 'from-transparent via-white to-transparent' : 'from-transparent via-gray-400 to-transparent'}`}></div>
       </div>
 
       {/* Detalles de la cita */}
       <div className="space-y-4 mb-6">
         {/* Vehículo */}
-        <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/10">
-          <Car className="text-white/60 w-5 h-5" />
+        <div className={`flex items-center gap-3 p-3 rounded-xl border ${
+          isDarkMode ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'
+        }`}>
+          <Car className={isDarkMode ? 'text-white/60' : 'text-gray-500'} />
           <div>
-            <div className="text-white font-bold">
-              {cita.carro?.marca} {cita.carro?.modelo}
-            </div>
-            <div className="text-white/60 text-xs uppercase">
-              {cita.carro?.placas}
-            </div>
+            {loadingCarro ? (
+              <div className={isDarkMode ? 'text-white/60' : 'text-gray-500'}>Cargando vehículo...</div>
+            ) : carro ? (
+              <>
+                <div className={isDarkMode ? 'text-white' : 'text-gray-900'}>
+                  {carro.marca ?? 'Marca'} {carro.modelo ?? ''}
+                </div>
+                <div className={isDarkMode ? 'text-white/60' : 'text-gray-500'}>
+                  {carro.placas ?? '—'}
+                </div>
+              </>
+            ) : (
+              <div className={isDarkMode ? 'text-white/60' : 'text-gray-500'}>Vehículo no disponible</div>
+            )}
           </div>
         </div>
 
         {/* Fecha y hora */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/10">
-            <Calendar className="text-white/60 w-5 h-5" />
+          <div className={`flex items-center gap-3 p-3 rounded-xl border ${
+            isDarkMode ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'
+          }`}>
+            <Calendar className={isDarkMode ? 'text-white/60' : 'text-gray-500'} />
             <div>
-              <div className="text-white font-bold">
-                {formatearFecha(cita.fechaInicio)}
+              <div className={isDarkMode ? 'text-white' : 'text-gray-900'}>
+                {formatearFecha(cita?.fechaInicio)}
               </div>
-              <div className="text-white/60 text-xs uppercase">FECHA</div>
+              <div className={isDarkMode ? 'text-white/60' : 'text-gray-500'}>
+                FECHA
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/10">
-            <Clock className="text-white/60 w-5 h-5" />
+          <div className={`flex items-center gap-3 p-3 rounded-xl border ${
+            isDarkMode ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'
+          }`}>
+            <Clock className={isDarkMode ? 'text-white/60' : 'text-gray-500'} />
             <div>
-              <div className="text-white font-bold">{obtenerHora(cita.fechaInicio)}</div>
-              <div className="text-white/60 text-xs uppercase">
-                {calcularDuracion(cita.fechaInicio, cita.fechaFin)}
+              <div className={isDarkMode ? 'text-white' : 'text-gray-900'}>
+                {obtenerHora(cita?.fechaInicio)}
+              </div>
+              <div className={isDarkMode ? 'text-white/60' : 'text-gray-500'}>
+                Hora para llegar
               </div>
             </div>
           </div>
@@ -76,28 +140,44 @@ const CitaClienteCard = ({ cita }) => {
 
         {/* Estado y Costo */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/10">
-            <MapPin className="text-white/60 w-5 h-5" />
+          <div className={`flex items-center gap-3 p-3 rounded-xl border ${
+            isDarkMode ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'
+          }`}>
+            <MapPin className={isDarkMode ? 'text-white/60' : 'text-gray-500'} />
             <div>
-              <div className="text-white font-bold capitalize">{cita.estado}</div>
-              <div className="text-white/60 text-xs uppercase">ESTADO</div>
+              <div className={isDarkMode ? 'text-white' : 'text-gray-900'}>
+                {cita?.estado ?? '—'}
+              </div>
+              <div className={isDarkMode ? 'text-white/60' : 'text-gray-500'}>
+                ESTADO
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/10">
-            <User className="text-white/60 w-5 h-5" />
+          <div className={`flex items-center gap-3 p-3 rounded-xl border ${
+            isDarkMode ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'
+          }`}>
+            <User className={isDarkMode ? 'text-white/60' : 'text-gray-500'} />
             <div>
-              <div className="text-white font-bold">${cita.costo}</div>
-              <div className="text-white/60 text-xs uppercase">COSTO</div>
+              <div className={isDarkMode ? 'text-white' : 'text-gray-900'}>
+                ${cita?.costo ?? '0'}
+              </div>
+              <div className={isDarkMode ? 'text-white/60' : 'text-gray-500'}>
+                COSTO
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Información Adicional */}
-      {cita.informacionAdicional && (
-        <div className="mb-6 p-4 bg-gradient-to-r from-white/5 to-white/10 rounded-xl border border-white/10">
-          <div className="text-white/60 text-xs uppercase tracking-wider mb-1">NOTAS ESPECIALES</div>
-          <p className="text-white/90 text-sm font-medium leading-relaxed">
+      {cita?.informacionAdicional && (
+        <div className={`mb-6 p-4 rounded-xl border ${
+          isDarkMode ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'
+        }`}>
+          <div className={isDarkMode ? 'text-white/60' : 'text-gray-500'}>
+            NOTAS ESPECIALES
+          </div>
+          <p className={isDarkMode ? 'text-white/90' : 'text-gray-700'}>
             {cita.informacionAdicional}
           </p>
         </div>
@@ -105,16 +185,17 @@ const CitaClienteCard = ({ cita }) => {
 
       {/* Botones de acción */}
       <div className="flex gap-3">
-        <button className="flex-1 bg-white/10 hover:bg-white/20 text-white font-bold py-3 px-4 rounded-xl transition-all duration-300 text-sm uppercase tracking-wider border border-white/20 hover:border-white/40">
+        <button className={`flex-1 font-bold py-3 px-4 rounded-xl transition-all duration-300 text-sm uppercase tracking-wider border ${
+          isDarkMode 
+            ? 'bg-white/10 hover:bg-white/20 text-white border-white/20 hover:border-white/40' 
+            : 'bg-gray-100 hover:bg-gray-200 text-gray-900 border-gray-200 hover:border-gray-300'
+        }`}>
           MODIFICAR
         </button>
-        <button className="flex-1 bg-red-600/80 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-xl transition-all duration-300 text-sm uppercase tracking-wider">
+        <button className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-xl transition-all duration-300 text-sm uppercase tracking-wider">
           CANCELAR
         </button>
       </div>
-
-      {/* Elemento decorativo */}
-      <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-white/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-b-3xl"></div>
     </div>
   );
 };

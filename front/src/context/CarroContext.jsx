@@ -7,6 +7,9 @@ import {
     deleteCarroRequest 
 } from '../api/auth.carro';
 
+// Import citas API to check for active citas antes de eliminar un carro
+import { getCitasByCarroRequest } from '../api/auth.citas';
+
 const CarroContext = createContext();
 
 export const useCarro = () => {
@@ -125,22 +128,46 @@ export const CarroProvider = ({ children }) => {
     const deleteCarros = async (ids) => {
         try {
             setLoading(true);
-            if (Array.isArray(ids)) {
+
+            // normalizar a array
+            const idsArray = Array.isArray(ids) ? ids : [ids];
+
+            // validar por cada carro si tiene citas activas (programada / en_proceso)
+            for (const id of idsArray) {
+                try {
+                    const citas = await getCitasByCarroRequest(id);
+                    const active = (citas.data || []).some(c =>
+                        ['programada', 'en_proceso'].includes((c.estado || '').toString().toLowerCase())
+                    );
+                    if (active) {
+                        setLoading(false);
+                        throw new Error('No se puede eliminar el vehículo porque tiene citas activas.');
+                    }
+                } catch (err) {
+                    // si la petición de citas falla, abortar y devolver error controlado
+                    console.error('Error verificando citas del carro:', err);
+                    setLoading(false);
+                    throw new Error('Error al verificar citas del vehículo. Intenta nuevamente.');
+                }
+            }
+
+            // Si pasaron las validaciones, proceder a eliminar
+            if (idsArray.length > 1) {
                 const results = await Promise.all(
-                    ids.map(id => deleteCarroRequest(id))
+                    idsArray.map(id => deleteCarroRequest(id))
                 );
-                setCarros(prev => prev.filter(carro => !ids.includes(carro._id)));
+                setCarros(prev => prev.filter(carro => !idsArray.includes(carro._id)));
                 setLoading(false);
                 return results.map(res => res.data);
             } else {
-                const res = await deleteCarroRequest(ids);
-                setCarros(prev => prev.filter(carro => carro._id !== ids));
+                const res = await deleteCarroRequest(idsArray[0]);
+                setCarros(prev => prev.filter(carro => carro._id !== idsArray[0]));
                 setLoading(false);
                 return res.data;
             }
         } catch (error) {
             console.error('Error al eliminar carro:', error);
-            setError([error.response ? error.response.data : 'Error al eliminar el vehículo']);
+            setError([error.response ? error.response.data : error.message || 'Error al eliminar el vehículo']);
             setLoading(false);
             throw error;
         }

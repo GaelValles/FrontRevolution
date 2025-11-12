@@ -96,20 +96,10 @@ export const CitaAdminCard = ({ cita, index, estadoConfig }) => {
               <span className="block text-white/50 text-xs mb-1">Inicio:</span>
               {new Date(cita.fechaInicio).toLocaleString()}
             </div>
-            <div className="text-white/70">
-              <Clock className="inline w-4 h-4 mr-2 text-white/40" />
-              <span className="block text-white/50 text-xs mb-1">Fin:</span>
-              {new Date(cita.fechaFin).toLocaleString()}
-            </div>
+
           </div>
 
-          {/* Ubicación */}
-          <div className="mb-4 flex items-center gap-2">
-            <MapPin className="text-white/60 text-sm w-4 h-4" />
-            <span className="text-white/70 text-sm">
-              {cita.cliente?.direccion || 'Dirección no disponible'}
-            </span>
-          </div>
+ 
 
           {/* Observaciones */}
           {cita.informacionAdicional && (

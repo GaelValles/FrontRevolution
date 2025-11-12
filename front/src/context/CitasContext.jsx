@@ -1,242 +1,189 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { 
-    addCitaRequest, 
-    getCitasRequest, 
-    getCitaRequest,
-    getCitasByClienteRequest,
-    getCitasByCarroRequest,
-    updateCitaRequest,
-    deleteCitaRequest,
-    getAllCitasRequest,
-    updateCitaEstadoRequest
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import {
+  addCitaRequest,
+  getCitasRequest,
+  getCitasByCarroRequest,
+  getCitasByClienteRequest,
+  getAllCitasRequest,
+  updateCitaEstadoRequest
 } from '../api/auth.citas';
 
-export const CitasContext = createContext();
+const CitasContext = createContext();
 
-export const useCitas = () => {
-    const context = useContext(CitasContext);
-    if (!context) {
-        throw new Error('useCitas must be used within a CitasProvider');
-    }
-    return context;
-};
+export const useCitas = () => useContext(CitasContext);
 
 export const CitasProvider = ({ children }) => {
-    const [citas, setCitas] = useState([]);
-    const [error, setError] = useState([]);
-    const [loading, setLoading] = useState(false);
+  const [citas, setCitas] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-    // Agregar una nueva cita
-    const addCita = async (citaData) => {
-        try {
-            setLoading(true);
-            const res = await addCitaRequest(citaData);
-            setCitas(prev => [...prev, res.data]);
-            return { success: true, data: res.data };
-        } catch (error) {
-            console.error('Error al agregar cita:', error);
-            setError(error.response?.data?.message || 'Error al crear la cita');
-            return { success: false, error: error.response?.data };
-        } finally {
-            setLoading(false);
+  const loadCitas = async () => {
+    setLoading(true);
+    try {
+      const res = await getCitasRequest();
+      setCitas(res.data || []);
+    } catch (err) {
+      console.error('Error cargando citas:', err?.response?.data || err.message);
+      setCitas([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadCitas();
+  }, []);
+
+  const addCita = async (citaData) => {
+    try {
+      setLoading(true);
+
+      // Pre-validación con el backend: obtener citas del carro para evitar conflictos en cliente
+      if (!citaData.carro) {
+        return { success: false, error: { carro: 'Vehículo requerido' } };
+      }
+
+      let existingCitas = [];
+      try {
+        const r = await getCitasByCarroRequest(
+          typeof citaData.carro === 'string' ? citaData.carro : citaData.carro._id
+        );
+        existingCitas = r.data || [];
+      } catch (err) {
+        // Si server responde 404 o 500, propagar error claro
+        console.error('Error obteniendo citas por carro (prevalidation):', err?.response?.data || err.message);
+        return { success: false, error: { server: 'No se pudo validar disponibilidad del vehículo' } };
+      }
+
+      // Aquí puedes agregar más validaciones locales si quieres (solapamientos, rango horario, etc.)
+
+      const res = await addCitaRequest(citaData);
+      setCitas(prev => [...prev, res.data]);
+      return { success: true, data: res.data };
+    } catch (error) {
+      console.error('Error al crear cita:', error?.response?.data || error.message);
+      const serverMessage = error?.response?.data?.message || error?.message || 'Error desconocido';
+      return { success: false, error: { submit: serverMessage } };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getCitasPorCliente = async (clienteId) => {
+    try {
+      const res = await getCitasByClienteRequest(clienteId);
+      return { success: true, data: res.data || [] };
+    } catch (err) {
+      console.error('Error fetching citas por cliente:', err?.response?.data || err.message);
+      return { success: false, error: err?.response?.data || err.message };
+    }
+  };
+
+  // Obtener todas las citas (wrapper usado por la UI admin)
+  const getAllCitas = async () => {
+    setLoading(true);
+    try {
+      const res = await getAllCitasRequest();
+      const data = res.data || [];
+      setCitas(data);
+      return data;
+    } catch (err) {
+      console.error('Error getAllCitas:', err?.response?.data || err.message);
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Actualizar estado de una cita y mantener estado local sincronizado
+  const updateCitaEstado = async (id, estado) => {
+    try {
+      setLoading(true);
+      const res = await updateCitaEstadoRequest(id, estado);
+      const updated = res.data;
+      setCitas(prev => prev.map(c => (c._id === updated._id ? updated : c)));
+      return updated;
+    } catch (err) {
+      console.error('Error updateCitaEstado:', err?.response?.data || err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // helper: parsear fecha a Date en zona local (acepta ISO o "YYYY-MM-DDTHH:MM")
+  const parseLocalDate = (value) => {
+    if (!value) return null;
+    if (value instanceof Date) return value;
+    if (typeof value !== 'string') return null;
+
+    // Intentar parseo nativo (maneja ISO)
+    const dt = new Date(value);
+    if (!isNaN(dt.getTime())) return dt;
+
+    // Fallback para "YYYY-MM-DDTHH:MM" o "YYYY-MM-DD"
+    const [datePart, timePart = '00:00'] = value.split('T');
+    const [y, m, d] = (datePart || '').split('-').map(Number);
+    const [hh = 0, mm = 0] = (timePart || '').split(':').map(Number);
+    if ([y, m, d].every(n => Number.isFinite(n))) {
+      return new Date(y, (m || 1) - 1, d, hh, mm, 0, 0);
+    }
+    return null;
+  };
+
+  // Validación reutilizable para crear/editar citas (devuelve { isValid, errors })
+  const validateCitaData = (citaData = {}) => {
+    const errors = {};
+
+    // fechaInicio
+    if (!citaData.fechaInicio) {
+      errors.fechaInicio = 'La fecha de inicio es requerida';
+    } else {
+      const dt = parseLocalDate(citaData.fechaInicio);
+      if (!dt || isNaN(dt.getTime())) {
+        errors.fechaInicio = 'Formato de fecha inválido';
+      } else {
+        const totalMinutes = dt.getHours() * 60 + dt.getMinutes();
+        const minMinutes = 9 * 60;
+        const maxMinutes = 17 * 60;
+        if (totalMinutes < minMinutes || totalMinutes > maxMinutes) {
+          errors.fechaInicio = 'Selecciona una hora entre 09:00 y 17:00';
         }
+      }
+    }
+
+    if (!citaData.tipoServicio) {
+      errors.tipoServicio = 'El tipo de servicio es requerido';
+    }
+
+    if (!citaData.carro) {
+      errors.carro = 'Debe seleccionar un vehículo';
+    }
+
+    if (!citaData.cliente) {
+      errors.cliente = 'Error: No se ha identificado el cliente';
+    }
+
+    return {
+      isValid: Object.keys(errors).length === 0,
+      errors
     };
+  };
 
-    // Obtener todas las citas
-    const getCitas = async () => {
-        try {
-            setLoading(true);
-            const res = await getCitasRequest();
-            setCitas(res.data);
-            return res.data;
-        } catch (error) {
-            console.error('Error al obtener citas:', error);
-            setError(error.response?.data?.message || 'Error al obtener las citas');
-            return [];
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // Obtener cita por ID
-    const getCitaById = useCallback(async (id) => {
-        try {
-            setLoading(true);
-            const res = await getCitaRequest(id);
-            return res.data;
-        } catch (error) {
-            console.error('Error al obtener cita:', error);
-            setError(error.response?.data?.message || 'Error al obtener la cita');
-            return null;
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    // Obtener citas por cliente
-    const getCitasByCliente = useCallback(async (clienteId) => {
-        try {
-            setLoading(true);
-            const res = await getCitasByClienteRequest(clienteId);
-            console.log('Citas del cliente obtenidas:', res.data);
-            return res.data;
-        } catch (error) {
-            console.error('Error al obtener citas del cliente:', error);
-            setError(error.response?.data?.message || 'Error al obtener las citas del cliente');
-            return [];
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    // Obtener citas por carro
-    const getCitasByCarro = useCallback(async (carroId) => {
-        try {
-            setLoading(true);
-            const res = await getCitasByCarroRequest(carroId);
-            return res.data;
-        } catch (error) {
-            console.error('Error al obtener citas del vehículo:', error);
-            setError(error.response?.data?.message || 'Error al obtener las citas del vehículo');
-            return [];
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    // Actualizar cita
-    const updateCita = async (id, citaData) => {
-        try {
-            setLoading(true);
-            const res = await updateCitaRequest(id, citaData);
-            setCitas(prev => prev.map(cita => 
-                cita._id === id ? res.data : cita
-            ));
-            return { success: true, data: res.data };
-        } catch (error) {
-            console.error('Error al actualizar cita:', error);
-            setError(error.response?.data?.message || 'Error al actualizar la cita');
-            return { success: false, error: error.response?.data };
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // Eliminar cita
-    const deleteCita = async (id) => {
-        try {
-            setLoading(true);
-            await deleteCitaRequest(id);
-            setCitas(prev => prev.filter(cita => cita._id !== id));
-            return { success: true };
-        } catch (error) {
-            console.error('Error al eliminar cita:', error);
-            setError(error.response?.data?.message || 'Error al eliminar la cita');
-            return { success: false, error: error.response?.data };
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // Obtener todas las citas (sin filtros)
-    const getAllCitas = async () => {
-        try {
-            const response = await getAllCitasRequest();
-            return response.data;
-        } catch (error) {
-            console.error('Error al obtener citas:', error);
-            throw error;
-        }
-    };
-
-    // Actualizar estado de una cita
-    const updateCitaEstado = async (citaId, nuevoEstado) => {
-        try {
-            console.log('Context recibió:', { citaId, nuevoEstado });
-            const result = await updateCitaEstadoRequest(citaId, nuevoEstado);
-            console.log('Respuesta del servidor:', result.data);
-            return result.data;
-        } catch (error) {
-            console.error(' Error en updateCitaEstado:', error.response?.data || error.message);
-            throw error;
-        }
-    };
-
-    // Validar datos de la cita
-    const validateCitaData = (citaData) => {
-        const errors = {};
-        
-        if (!citaData.fechaInicio) {
-            errors.fechaInicio = 'La fecha de inicio es requerida';
-        }
-        
-        if (!citaData.fechaFin) {
-            errors.fechaFin = 'La fecha de fin es requerida';
-        }
-        
-        if (!citaData.tipoServicio) {
-            errors.tipoServicio = 'El tipo de servicio es requerido';
-        }
-        
-        if (!citaData.carro) {
-            errors.carro = 'Debe seleccionar un vehículo';
-        }
-
-        if (!citaData.cliente) {
-            errors.cliente = 'Error: No se ha identificado el cliente';
-        }
-
-        // Validar que las fechas sean válidas
-        if (citaData.fechaInicio && citaData.fechaFin) {
-            const inicio = new Date(citaData.fechaInicio);
-            const fin = new Date(citaData.fechaFin);
-            
-            if (isNaN(inicio.getTime())) {
-              errors.fechaInicio = 'Fecha de inicio inválida';
-            }
-            
-            if (isNaN(fin.getTime())) {
-              errors.fechaFin = 'Fecha de fin inválida';
-            }
-            
-            if (fin <= inicio) {
-              errors.fechaFin = 'La fecha de fin debe ser posterior a la fecha de inicio';
-            }
-        }
-        
-        return {
-            isValid: Object.keys(errors).length === 0,
-            errors
-        };
-    };
-
-    // Limpiar errores después de 5 segundos
-    useEffect(() => {
-        if (error.length > 0) {
-            const timer = setTimeout(() => {
-                setError([]);
-            }, 5000);
-            return () => clearTimeout(timer);
-        }
-    }, [error]);
-
-    return (
-        <CitasContext.Provider value={{
-            citas,
-            loading,
-            error,
-            addCita,
-            getCitas,
-            getCitaById,
-            getCitasByCliente,
-            getCitasByCarro,
-            updateCita,
-            deleteCita,
-            getAllCitas,
-            updateCitaEstado,
-            validateCitaData
-        }}>
-            {children}
-        </CitasContext.Provider>
-    );
+  return (
+    <CitasContext.Provider value={{
+      citas,
+      loading,
+      addCita,
+      loadCitas,
+      getCitasPorCliente,
+      getCitasByCarroRequest,
+      validateCitaData,
+      getAllCitas,
+      updateCitaEstado
+     }}>
+       {children}
+     </CitasContext.Provider>
+   );
 };
+
+export default CitasContext;
