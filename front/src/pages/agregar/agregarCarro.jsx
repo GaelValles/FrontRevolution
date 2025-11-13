@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useCarro } from '../../context/CarroContext';
 import { useNavigate } from 'react-router-dom';
 import { Car, Check } from 'lucide-react';
-import carWashImage from '../../assets/images/agregarcarro.jpg';
+import carWashImage from '../../assets/images/agregarCarro.png';
 import Sidebar from '../components/sidebar';
 
 function AgregarCarro() {

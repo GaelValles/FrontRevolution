@@ -4,7 +4,7 @@ import { Calendar } from 'lucide-react';
 import { useCitaForm } from '../../hooks/useCitaForm';
 import { CitaForm } from '../../components/forms/CitaForm';
 import Sidebar from '../components/sidebar';
-import citaImage from '../../assets/images/agregarcarro.jpg';
+import citaImage from '../../assets/images/agregarCarro.png';
 
 function AgregarCita() {
   const navigate = useNavigate();

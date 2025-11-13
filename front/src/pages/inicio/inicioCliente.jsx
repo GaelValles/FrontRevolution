@@ -191,7 +191,7 @@ const InicioCliente = () => {
 
           {/* Vehicles Section */}
           <section className="max-w-7xl mx-auto mb-16">
-            <div className="text-center md:text-left mb-8">
+            <div className="text-center md:text-left mb-8 px-8">
               <h2 className={`text-3xl font-black mb-2 tracking-tight ${
                 isDarkMode ? 'text-white' : 'text-gray-900'
               }`}>
@@ -217,7 +217,7 @@ const InicioCliente = () => {
 
           {/* Appointments Section */}
           <section className="max-w-7xl mx-auto mb-16">
-            <div className="text-center md:text-left mb-8">
+            <div className="text-center md:text-left mb-8 px-8">
               <h2 className="text-3xl font-black text-white mb-2 tracking-tight">
                 PRÓXIMAS CITAS
               </h2>
