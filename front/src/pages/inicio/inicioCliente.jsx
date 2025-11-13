@@ -179,7 +179,7 @@ const InicioCliente = () => {
                       <button onClick={() => navigate('/planes')}
                         className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-3 rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20">
                         <Star className="w-5 h-5" />
-                        <span>Ver Promociones</span>
+                        <span>Ver Servicios</span>
                       </button>
                     </div>
                    </div>

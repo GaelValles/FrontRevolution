@@ -19,6 +19,8 @@ import MisCitas from "./pages/Mis/misCitas";
 //Planes
 import Planes from "./pages/planes";
 import Perfil from "./pages/perfil";
+import PerfilAdmin from "./pages/perfilAdmin";
+
 import Historial from "./pages/components/historial";
 //Contextos
 import { AuthProvider } from "./context/AuthContext";
@@ -55,6 +57,7 @@ function App() {
 
                     <Route path="/planes" element={<Planes />} />
                     <Route path="/perfil" element={<Perfil />} />
+                    <Route path="/perfilAdmin" element={<PerfilAdmin />} />
                     <Route path="/historial" element={<Historial />} />
                   </Route>
                   <Route path="/loading" element={<LoadingTransition />} />

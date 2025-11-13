@@ -1,153 +1,286 @@
-import React from 'react';
-import { Car, Truck, Bike, Check } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Check } from 'lucide-react';
 import Sidebar from '../pages/components/sidebar';
+import { useTheme } from '../context/ThemeContext';
 
-function Planes() {
-  const servicios = {
-    simple: {
-      nombre: "SILVER",
-      color: "gray",
-      precio: "499",
-      periodo: "Por Servicio",
-      caracteristicas: [
-        "Lavado exterior completo",
-        "Limpieza de rines",
-        "Secado a detalle",
-        "Aspirado básico interior",
-        "Limpieza de vidrios"
-      ],
-      precios: {
-        'carro chico': 120,
-        'carro grande': 150,
-        'camioneta chica': 170,
-        'camioneta grande': 200,
-        'motocicleta chica': 80,
-        'motocicleta grande': 100
-      }
+const servicios = [
+    {
+        id: 'interiores',
+        titulo: 'Limpieza profunda de interiores',
+        descripcion:
+            'Limpieza y tratamiento detallado de todas las superficies interiores para devolver aspecto y higiene al habitáculo.',
+        incluye: [
+            'Brillo y acondicionamiento de plásticos',
+            'Lavado y limpieza a fondo de asientos',
+            'Limpieza detallada de suelo, cielo y tapetes',
+            'Aspirado completo con atención a rincones y ranuras',
+            'Limpieza de paneles, tiradores y controles',
+            'Desinfección ligera de superficies de contacto',
+        ],
+    },
+    {
+        id: 'exterior',
+        titulo: 'Lavado exterior y detallado',
+        descripcion:
+            'Lavado completo de carrocería, rines y trabajo de secado para acabado sin marcas.',
+        incluye: [
+            'Prelavado para remover suciedad pesada',
+            'Lavado a mano con champú de pH neutro',
+            'Limpieza y abrillantado de rines',
+            'Secado y cuidado de juntas y gomas',
+            'Limpieza de cristales y espejos',
+        ],
+    },
+    {
+        id: 'pulido',
+        titulo: 'Pulido y encerado protector',
+        descripcion:
+            'Corrección ligera de pintura y protección con cera para brillo duradero.',
+        incluye: [
+            'Pulido de pintura para mejorar brillo',
+            'Eliminación de microrayas y marcas ligeras',
+            'Aplicación de cera protectora',
+            'Abrillantado final',
+        ],
+    },
+    {
+        id: 'motor',
+        titulo: 'Lavado de motor',
+        descripcion:
+            'Limpieza segura del compartimento del motor para mantenimiento estético y detección de fugas.',
+        incluye: [
+            'Desengrasado controlado',
+            'Aclarado y secado por zonas',
+            'Protección de componentes electrónicos visibles',
+        ],
+    },
+    {
+        id: 'sanitizacion',
+        titulo: 'Sanitización y ozono (opcional)',
+        descripcion:
+            'Tratamientos especiales para eliminar olores y gérmenes en el interior del vehículo.',
+        incluye: [
+            'Aplicación de sanitizante de amplio espectro',
+            'Tratamiento con ozono para eliminación de olores',
+            'Refuerzo en zonas de contacto',
+        ],
+    },
+];
+
+// Precios ficticios por servicio y tipo de vehículo (ajustables)
+const preciosPorServicio = {
+    interiores: {
+        'Carro chico': 400,
+        'Carro grande': 550,
+        'Camioneta chica': 650,
+        'Camioneta grande': 800,
+        'Motocicleta chica': 200,
+        'Motocicleta grande': 300,
+    },
+    exterior: {
+        'Carro chico': 250,
+        'Carro grande': 350,
+        'Camioneta chica': 400,
+        'Camioneta grande': 500,
+        'Motocicleta chica': 120,
+        'Motocicleta grande': 180,
     },
     pulido: {
-      nombre: "GOLD",
-      color: "amber",
-      precio: "1499",
-      periodo: "Por Servicio",
-      caracteristicas: [
-        "Lavado simple completo",
-        "Pulido de carrocería",
-        "Encerado protector",
-        "Abrillantado de rines",
-        "Tratamiento de plásticos"
-      ],
-      precios: {
-        'carro chico': 350,
-        'carro grande': 400,
-        'camioneta chica': 450,
-        'camioneta grande': 500,
-        'motocicleta chica': 250,
-        'motocicleta grande': 300
-      }
+        'Carro chico': 800,
+        'Carro grande': 1100,
+        'Camioneta chica': 1300,
+        'Camioneta grande': 1600,
+        'Motocicleta chica': 400,
+        'Motocicleta grande': 600,
     },
-    especializado: {
-      nombre: "PLATINUM",
-      color: "zinc",
-      precio: "4999",
-      periodo: "Por Servicio",
-      caracteristicas: [
-        "Lavado simple completo",
-        "Limpieza profunda de interiores",
-        "Lavado de motor",
-        "Desmanchado de tapicería",
-        "Sanitización completa"
-      ],
-      precios: {
-        'carro chico': 450,
-        'carro grande': 550,
-        'camioneta chica': 600,
-        'camioneta grande': 700,
-        'motocicleta chica': 300,
-        'motocicleta grande': 350
-      }
-    }
-  };
+    motor: {
+        'Carro chico': 200,
+        'Carro grande': 300,
+        'Camioneta chica': 350,
+        'Camioneta grande': 450,
+        'Motocicleta chica': 100,
+        'Motocicleta grande': 150,
+    },
+    sanitizacion: {
+        'Carro chico': 150,
+        'Carro grande': 220,
+        'Camioneta chica': 260,
+        'Camioneta grande': 320,
+        'Motocicleta chica': 80,
+        'Motocicleta grande': 120,
+    },
+};
 
-  return (
-    <div className="min-h-screen bg-[#0A0A0A] text-white">
-      <Sidebar />
-      <div className="p-8 md:p-12 md:ml-20">
-        {/* Header section */}
-        <div className="text-center max-w-3xl mx-auto mb-16">
-          <h1 className="text-4xl md:text-5xl font-bold mb-6">
-            Nuestros Planes
-          </h1>
-          <p className="text-gray-400 text-lg">
-            Selecciona el plan que mejor se adapte a tus necesidades
-          </p>
-        </div>
+const vehicleTypes = [
+    'Carro chico',
+    'Carro grande',
+    'Camioneta chica',
+    'Camioneta grande',
+    'Motocicleta chica',
+    'Motocicleta grande',
+];
 
-        {/* Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl mx-auto">
-          {Object.entries(servicios).map(([key, servicio]) => (
-            <div key={key} 
-                 className="group relative bg-[#111111] rounded-2xl p-8 
-                          border border-gray-800 transition-all duration-500">
-              
-              {/* Card Header */}
-              <div className="text-center mb-8">
-                <p className="text-sm uppercase tracking-widest mb-4 font-medium text-white">
-                  {servicio.nombre}
-                </p>
-                <div className="flex items-baseline justify-center gap-x-2">
-                  <span className="text-2xl text-gray-400">$</span>
-                  <span className="text-5xl font-bold text-white">
-                    {servicio.precio}
-                  </span>
-                  <span className="text-gray-500">{servicio.periodo}</span>
-                </div>
-              </div>
+function formatPrice(value) {
+    if (typeof value !== 'number') return '-';
+    return `$${value.toLocaleString('es-MX')}`;
+}
 
-              {/* Features List */}
-              <ul className="space-y-4 mb-8">
-                {servicio.caracteristicas.map((caracteristica, index) => (
-                  <li key={index} 
-                      className="flex items-center gap-3 text-gray-400 hover:text-gray-300">
-                    <Check className="w-5 h-5 text-gray-500" />
-                    <span>{caracteristica}</span>
-                  </li>
-                ))}
-              </ul>
+function Planes() {
+    const { isDarkMode } = useTheme();
+    const [sidebarWidth, setSidebarWidth] = useState(null);
 
-              {/* Vehicle Prices */}
-              <div className="space-y-3 mb-8">
-                {Object.entries(servicio.precios).map(([tipo, precio]) => (
-                  <div key={tipo} 
-                       className="flex items-center justify-between p-3
-                                bg-black/40 rounded-lg border border-gray-800">
-                    <div className="flex items-center gap-2">
-                      {tipo.includes('moto') ? (
-                        <Bike className="w-4 h-4 text-gray-400" />
-                      ) : tipo.includes('camioneta') ? (
-                        <Truck className="w-4 h-4 text-gray-400" />
-                      ) : (
-                        <Car className="w-4 h-4 text-gray-400" />
-                      )}
-                      <span className="text-gray-400 text-sm">{tipo}</span>
+    // Detect sidebar width (no cambios al sidebar, solo lectura). Keep page responsive to sidebar.
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+
+        let nav = document.querySelector('nav');
+
+        const updateWidth = () => {
+            nav = nav || document.querySelector('nav');
+            if (!nav) {
+                setSidebarWidth(null);
+                document.documentElement.style.removeProperty('--sidebar-width');
+                return;
+            }
+            const w = nav.offsetWidth || parseInt(getComputedStyle(nav).width, 10) || 0;
+            // For small screens we don't want left padding
+            const effective = window.innerWidth < 768 ? 0 : w;
+            setSidebarWidth(effective);
+            document.documentElement.style.setProperty('--sidebar-width', `${effective}px`);
+        };
+
+        updateWidth();
+
+        let ro;
+        if (typeof ResizeObserver !== 'undefined' && nav) {
+            ro = new ResizeObserver(updateWidth);
+            ro.observe(nav);
+        } else {
+            window.addEventListener('resize', updateWidth);
+        }
+
+        // Also observe mutations just in case sidebar toggles via class changes
+        const mo = new MutationObserver(updateWidth);
+        if (nav) mo.observe(nav, { attributes: true, subtree: false, attributeFilter: ['style', 'class'] });
+
+        return () => {
+            if (ro && nav) ro.disconnect();
+            if (mo) mo.disconnect();
+            window.removeEventListener('resize', updateWidth);
+            document.documentElement.style.removeProperty('--sidebar-width');
+        };
+    }, []);
+
+    const pageBg = isDarkMode ? 'bg-[#0A0A0A] text-white' : 'bg-gray-50 text-gray-900';
+    const cardBase = isDarkMode ? 'bg-[#111111] border-gray-800' : 'bg-white border-gray-200';
+    const buttonGradient = isDarkMode
+        ? 'from-indigo-600 to-emerald-400'
+        : 'from-indigo-600 to-blue-500';
+    const buttonTextColor = isDarkMode ? 'text-black' : 'text-white';
+    const buttonClasses = `bg-gradient-to-r ${buttonGradient} ${buttonTextColor}`;
+
+    // left padding to compensate sidebar width, fallback to CSS var
+    const leftPaddingStyle = {
+        paddingLeft: sidebarWidth === null ? 'var(--sidebar-width, 80px)' : `${sidebarWidth}px`,
+        transition: 'padding-left .2s ease',
+    };
+
+    return (
+        <div className={`${pageBg} min-h-screen`}>
+            <Sidebar />
+            <div className="w-full" style={leftPaddingStyle}>
+                <div className="p-8 md:p-12 max-w-7xl mx-auto">
+                    <header className="text-center mb-12">
+                        <h1 className="text-4xl md:text-5xl font-bold mb-4">
+                            Conoce nuestros servicios
+                        </h1>
+                        <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+                            Descubre todos los servicios que ofrecemos para el cuidado y
+                            mantenimiento de tu vehículo y elige el que mejor se adapte a tus
+                            necesidades.
+                        </p>
+                    </header>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        {servicios.map((s) => (
+                            <article
+                                key={s.id}
+                                className={`flex flex-col min-h-[360px] rounded-2xl p-6 border ${cardBase} shadow-sm`}
+                            >
+                                <div className="mb-4">
+                                    <h2 className="text-2xl font-bold mb-1">{s.titulo}</h2>
+                                    <p
+                                        className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} text-sm`}
+                                    >
+                                        {s.descripcion}
+                                    </p>
+                                </div>
+
+                                <div className="mt-4">
+                                    <h3 className="text-sm font-semibold text-gray-300 mb-3">
+                                        Incluye:
+                                    </h3>
+                                    <ul className="space-y-2">
+                                        {s.incluye.map((item, idx) => (
+                                            <li key={idx} className="flex items-start gap-3">
+                                                <span className="mt-1">
+                                                    <Check className="w-4 h-4 text-emerald-400" />
+                                                </span>
+                                                <span className={`${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                                    {item}
+                                                </span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+
+                                {/* Precios: ahora cada tile tiene altura consistente y badge centrado */}
+                                <div className="mt-6 w-full">
+                                    <h3 className="text-sm font-semibold text-gray-300 mb-4">
+                                        Precios por tipo de vehículo:
+                                    </h3>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                                        {vehicleTypes.map((vt) => (
+                                            <div
+                                                key={vt}
+                                                className={`flex flex-col items-center justify-between text-center gap-3 p-4 rounded-lg ${isDarkMode ? 'bg-white/3 border-white/6' : 'bg-gray-50 border-gray-100'} border min-w-0 min-h-[86px]`}
+                                            >
+                                                <div className={`text-sm font-medium truncate ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+                                                    {vt}
+                                                </div>
+
+                                                <div className="w-full flex justify-center">
+                                                    <span
+                                                        className={`${buttonClasses} inline-flex items-center justify-center px-4 py-2 rounded-full font-semibold text-sm shadow-sm whitespace-nowrap`}
+                                                        style={{ minWidth: 92 }}
+                                                    >
+                                                        {formatPrice(preciosPorServicio[s.id]?.[vt])}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* acción: separar visualmente y garantizar alineación */}
+                                <div className="mt-6 pt-4">
+                                    <div className="flex justify-center">
+                                        <button
+                                            onClick={() => (window.location.href = '/agregarCita')}
+                                            className={`${buttonClasses} inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold shadow-lg hover:opacity-95 transition`}
+                                        >
+                                            Agendar servicio
+                                        </button>
+                                    </div>
+                                </div>
+                            </article>
+                        ))}
                     </div>
-                    <span className="text-gray-400">${precio}</span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Action Button */}
-              <button className="w-full py-4 px-6 rounded-xl bg-white/10 
-                               hover:bg-white/20 transition-all duration-300
-                               text-white font-medium text-sm uppercase tracking-wider">
-                Get Started
-              </button>
+                </div>
             </div>
-          ))}
         </div>
-      </div>
-    </div>
-  );
+    );
 }
 
 export default Planes;

@@ -4,7 +4,6 @@ import {
   AiFillCar, 
   AiOutlineSchedule, 
   AiOutlineUser,
-  AiOutlineSetting,
   AiOutlineLogout 
 } from 'react-icons/ai';
 import { BsCarFrontFill, BsCalendarCheck, BsClockHistory, BsHouse } from 'react-icons/bs';
@@ -13,7 +12,6 @@ import {
   SidebarContainer,
   Logo,
   MenuItem,
-  ConfigButton,
   MenuSection,
   MenuLabel,
   ScrollbarStyles
@@ -24,48 +22,58 @@ import { Moon, Sun } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 
 const ThemeSwitch = ({ isDarkMode, toggleTheme, isOpen }) => {
-  return (
-    <div className="flex items-center justify-between p-4" style={{ borderBottom: `1px solid ${isDarkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}` }}>
-      <div className={`flex items-center gap-3 ${isOpen ? 'opacity-100' : 'opacity-0'}`}>
-        <span className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-          Cambiar a modo {isDarkMode ? 'claro' : 'oscuro'}
-        </span>
-      </div>
+  // local label class (keeps same hide/show behaviour as other menu labels)
+  const labelClass = `ml-2 transition-all duration-300 ${isOpen ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2 pointer-events-none'}`;
 
-      {/* Custom attractive switch */}
-      <button
-        onClick={toggleTheme}
-        aria-label="Cambiar tema"
-        className={`relative inline-flex items-center transition-colors duration-250 ${isDarkMode ? 'bg-gradient-to-r from-gray-700 to-blue-600' : 'bg-gray-200'}`}
-        style={{ width: 46, height: 26, borderRadius: 999 }}
-      >
-        <div style={{
-          position: 'absolute',
-          left: 6,
-          top: 6,
-          width: 14,
-          height: 14,
-          borderRadius: 999,
-          background: isDarkMode ? '#fff' : '#fff',
-          transform: `translateX(${isDarkMode ? 18 : 0}px)`,
-          boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
-          transition: 'transform 220ms cubic-bezier(.2,.9,.2,1)'
-        }}>
+  // When sidebar is open: show pill switch with label (existing behavior)
+  if (isOpen) {
+    return (
+      <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: `1px solid ${isDarkMode ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)'}` }}>
+        <div className="flex items-center gap-3">
+          <span className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+            {isDarkMode ? 'Modo oscuro' : 'Modo claro'}
+          </span>
         </div>
-        <div style={{ position: 'absolute', right: 8, opacity: isDarkMode ? 1 : 0.0, transition: 'opacity 200ms' }}>
-          <Moon className="h-3 w-3 text-white" />
-        </div>
-        <div style={{ position: 'absolute', left: 8, opacity: isDarkMode ? 0.0 : 1, transition: 'opacity 200ms' }}>
-          <Sun className="h-3 w-3 text-yellow-400" />
-        </div>
-      </button>
-    </div>
+
+        <button
+          onClick={toggleTheme}
+          aria-label="Cambiar tema"
+          className={`relative inline-flex items-center h-8 w-14 rounded-full transition-shadow focus:outline-none ${isDarkMode ? 'bg-gradient-to-r from-indigo-600 to-emerald-400' : 'bg-gray-200'}`}
+        >
+          <span
+            className={`absolute left-1 top-1 h-6 w-6 rounded-full bg-white shadow-md transform transition-transform ${isDarkMode ? 'translate-x-6' : 'translate-x-0'}`}
+          />
+          <div className="absolute left-2 top-1 text-xs" style={{ opacity: isDarkMode ? 0 : 1 }}>
+            <Sun className="w-4 h-4 text-yellow-400" />
+          </div>
+          <div className="absolute right-2 top-1 text-xs" style={{ opacity: isDarkMode ? 1 : 0 }}>
+            <Moon className="w-4 h-4 text-white" />
+          </div>
+        </button>
+      </div>
+    );
+  }
+
+  // When sidebar is closed: render a single icon button using MenuItem so it matches other icons
+  return (
+    <MenuItem
+      to="#"
+      isDarkMode={isDarkMode}
+      isOpen={isOpen}
+      onClick={(e) => {
+        e.preventDefault();
+        toggleTheme();
+      }}
+      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+    >
+      {isDarkMode ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5 text-yellow-400" />}
+      <span className={labelClass}>{isDarkMode ? 'Modo oscuro' : 'Modo claro'}</span>
+    </MenuItem>
   );
 };
 
 const Sidebar = ({ onHover }) => {
-  const [showConfig, setShowConfig] = useState(false);
-  const [isOpenLocal, setIsOpenLocal] = useState(false); // local open/close for animation
+  const [isOpenLocal, setIsOpenLocal] = useState(false);
   const { logout } = useAuth();
   const { isDarkMode, toggleTheme } = useTheme();
   const navigate = useNavigate();
@@ -80,10 +88,7 @@ const Sidebar = ({ onHover }) => {
   };
 
   useEffect(() => {
-    // Si el sidebar se cierra, asegurarse de cerrar la configuración
-    if (!isOpenLocal) {
-      setShowConfig(false);
-    }
+    // kept intentionally minimal
   }, [isOpenLocal]);
 
   const handleMouseEnter = () => {
@@ -93,7 +98,6 @@ const Sidebar = ({ onHover }) => {
 
   const handleMouseLeave = () => {
     setIsOpenLocal(false);
-    setShowConfig(false); // cerrar panel de configuración al contraer sidebar
     if (typeof onHover === 'function') onHover(false);
   };
 
@@ -107,7 +111,6 @@ const Sidebar = ({ onHover }) => {
       isOpen={isOpenLocal}
       className="backdrop-blur-xl"
     >
-      {/* apply custom scrollbar styles wrapper */}
       <ScrollbarStyles isDarkMode={isDarkMode}>
         <Link to="/inicioCliente" className="block mb-8">
           <div className="flex items-center gap-3">
@@ -116,7 +119,6 @@ const Sidebar = ({ onHover }) => {
         </Link>
 
         <MenuSection>
-          <MenuLabel isDarkMode={isDarkMode} isOpen={isOpenLocal}>Regresar al Inicio</MenuLabel>
           <MenuItem to="/inicioCliente" isDarkMode={isDarkMode} isOpen={isOpenLocal}>
             <BsHouse/>
             <span className={labelClass(isOpenLocal)}>Inicio</span>
@@ -155,41 +157,25 @@ const Sidebar = ({ onHover }) => {
           <MenuLabel isDarkMode={isDarkMode} isOpen={isOpenLocal}>Servicios</MenuLabel>
           <MenuItem to="/planes" isDarkMode={isDarkMode} isOpen={isOpenLocal}>
             <MdLocalOffer />
-            <span className={labelClass(isOpenLocal)}>Planes y Promociones</span>
+            <span className={labelClass(isOpenLocal)}>Servicios</span>
           </MenuItem>
         </MenuSection>
 
         <MenuSection className="mt-auto">
           <MenuLabel isDarkMode={isDarkMode} isOpen={isOpenLocal}>Usuario</MenuLabel>
+
           <MenuItem to="/perfil" isDarkMode={isDarkMode} isOpen={isOpenLocal}>
             <AiOutlineUser />
             <span className={labelClass(isOpenLocal)}>Mi Perfil</span>
           </MenuItem>
 
-          <ConfigButton>
-            <button
-              type="button"
-              onClick={() => setShowConfig(prev => !prev)}
-              className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors ${isDarkMode ? 'text-white/90 hover:bg-white/10' : 'text-gray-800 hover:bg-gray-100'}`}
-            >
-              <AiOutlineSetting />
-              <span className={labelClass(isOpenLocal)}>Configuración</span>
-            </button>
+          <MenuItem to="#" isDarkMode={isDarkMode} isOpen={isOpenLocal} onClick={(e) => { e.preventDefault(); handleLogout(); }}>
+            <AiOutlineLogout />
+            <span className={labelClass(isOpenLocal)}>Cerrar Sesión</span>
+          </MenuItem>
 
-            {showConfig && (
-              <div className={`absolute bottom-full left-0 w-full mb-2 ${isDarkMode ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-200 text-gray-900'} rounded-lg shadow-xl border overflow-hidden`}>
-                <ThemeSwitch isDarkMode={isDarkMode} toggleTheme={toggleTheme} isOpen={isOpenLocal} />
+        <ThemeSwitch isDarkMode={isDarkMode} toggleTheme={toggleTheme} isOpen={isOpenLocal} />
 
-                <button
-                  onClick={handleLogout}
-                  className={`w-full p-4 text-left flex items-center gap-2 ${isDarkMode ? 'text-red-400 hover:bg-gray-800' : 'text-red-600 hover:bg-gray-100'}`}
-                >
-                  <AiOutlineLogout />
-                  <span className={labelClass(isOpenLocal)}>Cerrar Sesión</span>
-                </button>
-              </div>
-            )}
-          </ConfigButton>
         </MenuSection>
       </ScrollbarStyles>
     </SidebarContainer>

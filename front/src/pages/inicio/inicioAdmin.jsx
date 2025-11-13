@@ -125,7 +125,7 @@ const CitasDashboard = () => {
   };
 
   const handleGoProfile = () => {
-    navigate('/perfil');
+    navigate('/perfilAdmin');
   };
 
   if (loading) {
