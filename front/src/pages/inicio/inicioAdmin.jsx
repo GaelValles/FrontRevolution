@@ -30,29 +30,34 @@ const CitasDashboard = () => {
       try {
         setLoading(true);
         const citasData = await getAllCitas();
-        setCitas(citasData);
+        setCitas(Array.isArray(citasData) ? citasData : []);
       } catch (error) {
         console.error('Error al cargar citas:', error);
         setError('Error al cargar las citas');
+        setCitas([]);
       } finally {
         setLoading(false);
       }
     };
 
     fetchCitas();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const serviciosUnicos = [...new Set(citas.map(cita => cita.tipoServicio))];
 
   const filteredCitas = citas.filter(cita => {
-    const matchesSearch = 
-      cita.cliente.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      `${cita.carro.marca} ${cita.carro.modelo}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      cita.cliente.telefono.includes(searchTerm);
+    const clienteNombre = (cita?.cliente?.nombre || '').toLowerCase();
+    const carroTexto = `${cita?.carro?.marca || ''} ${cita?.carro?.modelo || ''}`.toLowerCase();
+    const telefono = (cita?.cliente?.telefono || '');
+    const matchesSearch =
+      clienteNombre.includes(searchTerm.toLowerCase()) ||
+      carroTexto.includes(searchTerm.toLowerCase()) ||
+      telefono.includes(searchTerm);
     const matchesService = selectedService ? cita.tipoServicio === selectedService : true;
-    const matchesMarca = selectedMarca ? cita.carro.marca === selectedMarca : true;
-    const matchesModelo = selectedModelo ? cita.carro.modelo === selectedModelo : true;
-    const matchesDate = selectedDate ? new Date(cita.fecha) >= new Date(selectedDate) : true;
+    const matchesMarca = selectedMarca ? cita.carro?.marca === selectedMarca : true;
+    const matchesModelo = selectedModelo ? cita.carro?.modelo === selectedModelo : true;
+    const matchesDate = selectedDate ? new Date(cita.fechaInicio) >= new Date(selectedDate) : true;
 
     return matchesSearch && matchesService && matchesMarca && matchesModelo && matchesDate;
   });
@@ -66,7 +71,7 @@ const CitasDashboard = () => {
       await updateCitaEstado(citaId, nuevoEstado);
       // Actualizar la lista de citas
       const citasActualizadas = await getAllCitas();
-      setCitas(citasActualizadas);
+      setCitas(Array.isArray(citasActualizadas) ? citasActualizadas : []);
     } catch (error) {
       console.error('Error al actualizar estado:', error);
     }
@@ -81,27 +86,23 @@ const CitasDashboard = () => {
         const nuevoEstado = destination.droppableId;
         try {
             setLoading(true);
-            console.log('Iniciando actualización:', { 
-                citaId: draggableId, 
-                nuevoEstado,
-                source: source.droppableId,
-                destination: destination.droppableId
-            });
 
             // Actualizar optimísticamente la UI
             const citasActualizadas = citas.map(cita => 
-                cita._id === draggableId ? { ...cita, estado: nuevoEstado } : cita
+                cita._id === draggableId ? { ...cita, estado: nuevoEstado, fechaFin: nuevoEstado === 'completada' ? new Date().toISOString() : cita.fechaFin } : cita
             );
             setCitas(citasActualizadas);
 
             const resultado = await updateCitaEstado(draggableId, nuevoEstado);
-            console.log('Actualización completada:', resultado);
+            // refrescar del backend para asegurar fechaFin correcta
+            const fresh = await getAllCitas();
+            setCitas(Array.isArray(fresh) ? fresh : []);
             
         } catch (error) {
             console.error('Error en handleDragEnd:', error);
             // Revertir cambios en caso de error
             const citasOriginales = await getAllCitas();
-            setCitas(citasOriginales);
+            setCitas(Array.isArray(citasOriginales) ? citasOriginales : []);
         } finally {
             setLoading(false);
         }
@@ -138,6 +139,19 @@ const CitasDashboard = () => {
     );
   }
 
+  // Helper: comprobar si una fecha está dentro de las últimas 24 horas
+  const withinLast24Hours = (fecha) => {
+    if (!fecha) return false;
+    const ms = new Date(fecha).getTime();
+    if (isNaN(ms)) return false;
+    return (Date.now() - ms) <= 24 * 60 * 60 * 1000;
+  };
+
+  // Ingresos: sumar solo las citas completadas (todas las completadas, no filtradas por 24h)
+  const ingresosCompletadas = filteredCitas
+    .filter(c => (c.estado === 'completada'))
+    .reduce((sum, c) => sum + (Number(c.costo) || 0), 0);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 relative overflow-hidden">
       {/* Elementos decorativos de fondo */}
@@ -150,19 +164,52 @@ const CitasDashboard = () => {
       <DragDropContext onDragEnd={handleDragEnd}>
         <div className="relative z-10 p-6 flex justify-center">
           <div className="w-full max-w-7xl">
-            {/* Header del Dashboard */}
+            {/* Header del Dashboard */} 
             <header className="mb-8">
-              <div className="text-center mb-6">
-                <h1 className="text-5xl font-black text-white mb-2 tracking-tight">
-                  Revolution Carwash
-                </h1>
-                <div className="h-1 w-24 bg-gradient-to-r from-transparent via-white to-transparent mx-auto"></div>
+              <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
+                <div className="flex items-center gap-6">
+                  <div>
+                    <h1 className="text-5xl font-black text-white mb-0 tracking-tight">
+                      Revolution Carwash
+                    </h1>
+                  
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={handleGoProfile}
+                    className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/20 rounded-lg text-white hover:bg-white/10 transition"
+                    title="Perfil"
+                  >
+                    <User className="w-4 h-4" />
+                    <span className="text-sm font-semibold hidden sm:inline">Perfil</span>
+                  </button>
+
+                  <button
+                    onClick={() => setShowDiasInhabilesModal(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/20 rounded-lg text-white hover:bg-white/10 transition"
+                    title="Días inhábiles"
+                  >
+                    <Calendar className="w-4 h-4" />
+                    <span className="text-sm font-semibold hidden sm:inline">Días inhábiles</span>
+                  </button>
+
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center gap-2 px-4 py-2 bg-red-600/80 hover:bg-red-700 rounded-lg text-white font-bold transition"
+                    title="Cerrar sesión"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span className="text-sm hidden sm:inline">Cerrar sesión</span>
+                  </button>
+                </div>
               </div>
 
-              {/* Controles de búsqueda y filtros */}
+              {/* Search, filtros y stats (mantengo tu estructura original aquí) */}
               <div className="bg-black/60 backdrop-blur-xl p-6 rounded-2xl border border-white/20 max-w-7xl mx-auto">
-                 <div className="flex flex-col gap-6">
-                   {/* Search row */}
+                <div className="flex flex-col gap-6">
+                  {/* Search row */}
                   <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
                     <div className="flex items-center gap-3 flex-1">
                       <Search className="text-white/60 w-5 h-5" />
@@ -186,36 +233,9 @@ const CitasDashboard = () => {
                     </button>
                   </div>
 
-                  {/* Header action controls: perfil, logout, configurar días */}
-                  <div className="flex items-center gap-3 mt-4 md:mt-0 md:ml-4 justify-center md:justify-end">
-                    <button
-                      onClick={handleGoProfile}
-                      className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/20 rounded-lg text-white hover:bg-white/10 transition"
-                    >
-                      <User className="w-4 h-4" />
-                      <span className="text-sm font-semibold">Perfil</span>
-                    </button>
-
-                    <button
-                      onClick={() => setShowDiasInhabilesModal(true)}
-                      className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/20 rounded-lg text-white hover:bg-white/10 transition"
-                    >
-                      <Calendar className="w-4 h-4" />
-                      <span className="text-sm font-semibold">Días Inhábiles</span>
-                    </button>
-
-                    <button
-                      onClick={handleLogout}
-                      className="flex items-center gap-2 px-4 py-2 bg-red-600/80 hover:bg-red-700 rounded-lg text-white font-bold transition"
-                    >
-                      <LogOut className="w-4 h-4" />
-                      <span className="text-sm">Cerrar sesión</span>
-                    </button>
-                  </div>
- 
-                    {/* Filters panel - Now appears above stats when shown */}
-                    {showFilters && (
-                      <div className="pt-4 border-t border-white/20">
+                  {/* Header action controls already moved above; el resto de filtros y stats siguen igual */}
+                  {showFilters && (
+                    <div className="pt-4 border-t border-white/20">
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         {/* Marca Filter */}
                         <div>
@@ -279,11 +299,11 @@ const CitasDashboard = () => {
                           </button>
                         </div>
                       </div>
-                     </div>
-                   )}
+                    </div>
+                  )}
 
-                   {/* Stats row */}
-                   <div className="grid grid-cols-1 md:grid-cols-4 gap-6 text-center py-4 border-t border-white/10">
+                  {/* Stats row */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6 text-center py-4 border-t border-white/10">
                     <div className="flex flex-col items-center justify-center">
                       <div className="text-2xl font-black text-white mb-1">
                         {filteredCitas.length}
@@ -294,13 +314,13 @@ const CitasDashboard = () => {
                     </div>
                     <div className="flex flex-col items-center justify-center">
                       <div className="text-2xl font-black text-white mb-1">
-                        ${filteredCitas.reduce((sum, cita) => sum + (cita.costo || 0), 0).toLocaleString()}
+                        ${ingresosCompletadas.toLocaleString()}
                       </div>
                       <div className="text-white/70 font-medium uppercase tracking-wider text-sm text-center">
-                        Ingresos del Día
+                        Ingresos (Completadas)
                       </div>
                     </div>
-                                        <div className="flex flex-col items-center justify-center">
+                    <div className="flex flex-col items-center justify-center">
                       <div className="text-2xl font-black text-white mb-1">
                         {filteredCitas.filter(c => c.estado === 'en_proceso').length}
                       </div>
@@ -310,27 +330,30 @@ const CitasDashboard = () => {
                     </div>
                     <div className="flex flex-col items-center justify-center">
                       <div className="text-2xl font-black text-white mb-1">
-                        {filteredCitas.filter(c => c.estado === 'completada').length}
+                        {filteredCitas.filter(c => c.estado === 'completada' && withinLast24Hours(c.fechaFin)).length}
                       </div>
                       <div className="text-white/70 font-medium uppercase tracking-wider text-sm text-center">
-                        Completadas
+                        Completadas (24h)
                       </div>
                     </div>
-
                   </div>
-                 </div>
-               </div>
-             </header>
+                </div>
+              </div>
+            </header>
 
-            {/* Tablero Kanban de Citas */}
+            {/* Tablero Kanban de Citas */} 
             <main className="w-full">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
                 {Object.entries(estadosConfig).map(([estado, config]) => {
-                  const citasDeEsteEstado = filteredCitas.filter(cita => cita.estado === estado);
+                  // Filtrar citas por estado; para 'completada' excluir las que tengan fechaFin >24h
+                  let citasDeEsteEstado = filteredCitas.filter(cita => cita.estado === estado);
+                  if (estado === 'completada') {
+                    citasDeEsteEstado = citasDeEsteEstado.filter(cita => withinLast24Hours(cita.fechaFin));
+                  }
                   
                   return (
                     <div key={estado} className="space-y-4">
-                      {/* Header de columna */}
+                      {/* Header de columna */} 
                       <div className="bg-black/60 backdrop-blur-xl p-4 rounded-2xl border border-white/20 text-center">
                         <div className="flex items-center justify-center gap-3">
                           <h2 className="text-white font-black text-lg uppercase tracking-wider">
@@ -345,7 +368,7 @@ const CitasDashboard = () => {
                         </div>
                       </div>
 
-                      {/* Tarjetas de citas */}
+                      {/* Tarjetas de citas */} 
                       <Droppable 
                         droppableId={estado}
                         type="CITA"
@@ -384,7 +407,7 @@ const CitasDashboard = () => {
               </div>
             </main>
 
-            {/* Modal de Días Inhábiles (se abre desde controles del header) */}
+            {/* Modal de Días Inhábiles (se abre desde controles del header) */} 
             <DiasInhabilesModal 
               isOpen={showDiasInhabilesModal}
               onClose={() => setShowDiasInhabilesModal(false)}

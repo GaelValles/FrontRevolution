@@ -185,13 +185,7 @@ const CitaClienteCard = ({ cita }) => {
 
       {/* Botones de acción */}
       <div className="flex gap-3">
-        <button className={`flex-1 font-bold py-3 px-4 rounded-xl transition-all duration-300 text-sm uppercase tracking-wider border ${
-          isDarkMode 
-            ? 'bg-white/10 hover:bg-white/20 text-white border-white/20 hover:border-white/40' 
-            : 'bg-gray-100 hover:bg-gray-200 text-gray-900 border-gray-200 hover:border-gray-300'
-        }`}>
-          MODIFICAR
-        </button>
+
         <button className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-xl transition-all duration-300 text-sm uppercase tracking-wider">
           CANCELAR
         </button>

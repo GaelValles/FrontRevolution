@@ -132,57 +132,42 @@ const InicioCliente = () => {
               <div className="relative p-8">
                 {/* Content */}
                 <div className="relative">
-                  <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-                    <div className="text-center md:text-left">
-                      <h1 className={`text-4xl font-black mb-2 tracking-tight ${
-                        isDarkMode ? 'text-white' : 'text-gray-900'
-                      }`}>
+                  <div className="flex items-center gap-6">
+                    {/* Left: greeting (flexible) */}
+                    <div className="flex-1 text-center md:text-left">
+                      <h1 className={`text-4xl font-black mb-2 tracking-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                         Hola, {cliente?.nombre?.split(' ')[0] || 'Usuario'}
                       </h1>
                       <p className={`${isDarkMode ? 'text-white/70' : 'text-gray-600'} text-lg`}>
                         ¿Qué te gustaría hacer hoy?
                       </p>
+                    </div>
 
-                      {/* Mini info row: vehículos y citas */}
-                      <div className="mt-4 flex items-center justify-center md:justify-start gap-4">
-                        <div className={`flex items-center gap-3 px-4 py-2 rounded-lg ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'} border`}>
-                          <div className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                            Vehículos
-                          </div>
-                          <div className={`text-xl font-extrabold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                            {vehiculosCliente?.length || 0}
-                          </div>
+                    {/* Center: stats - centered & visually balanced */}
+                    <div className="flex-none mx-16">
+                      <div className={`flex items-center gap-4 px-4 py-2 rounded-2xl ${isDarkMode ? 'bg-white/4 border-white/8' : 'bg-white/90 border-gray-200'} border shadow-sm`}>
+                        <div className="text-center px-4">
+                          <div className={`text-sm font-medium ${isDarkMode ? 'text-white/80' : 'text-gray-600'}`}>Vehículos</div>
+                          <div className={`text-2xl font-extrabold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{vehiculosCliente?.length || 0}</div>
                         </div>
-
-                        <div className={`flex items-center gap-3 px-4 py-2 rounded-lg ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'} border`}>
-                          <div className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                            Citas activas
-                          </div>
-                          <div className={`text-xl font-extrabold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                            {citasCliente?.length || 0}
-                          </div>
+                        <div className="w-px h-12 bg-white/10" />
+                        <div className="text-center px-4">
+                          <div className={`text-sm font-medium ${isDarkMode ? 'text-white/80' : 'text-gray-600'}`}>Citas</div>
+                          <div className={`text-2xl font-extrabold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{citasCliente?.length || 0}</div>
                         </div>
                       </div>
                     </div>
 
-                    {/* Quick Actions */}
-                    <div className="flex gap-4">
-                      <button onClick={() => navigate('/agregarCarro')} 
-                        className={`flex items-center gap-2 px-5 py-3 rounded-xl transition-all duration-300 ${
-                          isDarkMode 
-                            ? 'bg-white/10 hover:bg-white/20 text-white border-white/10' 
-                            : 'bg-gray-100 hover:bg-gray-200 text-gray-900 border-gray-200'
-                        } border`}>
+                    {/* Right: quick actions (flex-none so center stays centered) */}
+                    <div className="flex-none flex gap-4">
+                      <button onClick={() => navigate('/agregarCarro')}
+                        className={`flex items-center gap-2 px-5 py-3 rounded-xl transition-all duration-300 ${isDarkMode ? 'bg-white/10 hover:bg-white/20 text-white border-white/10' : 'bg-gray-100 hover:bg-gray-200 text-gray-900 border-gray-200'} border`}>
                         <Plus className="w-5 h-5" />
                         <span>Agregar Carro</span>
                       </button>
 
                       <button
-                        className={`flex items-center gap-2 px-6 py-3 rounded-xl transition-all duration-300 ${
-                          isDarkMode 
-                            ? 'bg-white/10 hover:bg-white/20 text-white border-white/10' 
-                            : 'bg-gray-100 hover:bg-gray-200 text-gray-900 border-gray-200'
-                        } border ${(!vehiculosCliente || vehiculosCliente.length === 0) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        className={`flex items-center gap-2 px-6 py-3 rounded-xl transition-all duration-300 ${isDarkMode ? 'bg-white/10 hover:bg-white/20 text-white border-white/10' : 'bg-gray-100 hover:bg-gray-200 text-gray-900 border-gray-200'} border ${(!vehiculosCliente || vehiculosCliente.length === 0) ? 'opacity-50 cursor-not-allowed' : ''}`}
                         onClick={handleAgendarCita}
                         disabled={!vehiculosCliente || vehiculosCliente.length === 0}
                         aria-disabled={!vehiculosCliente || vehiculosCliente.length === 0}
@@ -197,11 +182,11 @@ const InicioCliente = () => {
                         <span>Ver Promociones</span>
                       </button>
                     </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </header>
+                   </div>
+                 </div>
+               </div>
+             </div>
+           </header>
 
 
           {/* Vehicles Section */}

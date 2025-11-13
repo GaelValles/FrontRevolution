@@ -2,13 +2,13 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useCarro } from '../../context/CarroContext';
 import { useNavigate } from 'react-router-dom';
-import { Car } from 'lucide-react';
+import { Car, Check } from 'lucide-react';
 import carWashImage from '../../assets/images/agregarcarro.jpg';
 import Sidebar from '../components/sidebar';
 
 function AgregarCarro() {
   const navigate = useNavigate();
-  const { cliente } = useAuth();
+  const { cliente, setCliente } = useAuth();
   const { addCarro, validateCarroData } = useCarro();
   const [showSuccess, setShowSuccess] = useState(false);
   const [errors, setErrors] = useState({});
@@ -81,8 +81,8 @@ function AgregarCarro() {
     const userData = cachedData ? JSON.parse(cachedData) : null;
     const clienteId = cliente?._id || userData?._id;
 
-    console.log('ID del cliente:', userData.id);
-    if (!userData.id) {
+    console.log('ID del cliente:', userData?.id || clienteId);
+    if (!userData?.id && !clienteId) {
       console.error('No hay ID de cliente disponible');
       setErrors({ 
         submit: 'Error de conexión. Por favor, actualice la página.' 
@@ -95,7 +95,7 @@ function AgregarCarro() {
 
       const carroData = {
         ...formData,
-        propietario: userData.id
+        propietario: userData?.id || clienteId
       };
 
       console.log('Datos a enviar:', carroData);
@@ -119,9 +119,54 @@ function AgregarCarro() {
           tipo: ''
         });
         
+        // Actualizar estado global y localStorage si el backend devolvió el carro o usuario actualizado,
+        // para que MisCarros lo muestre inmediatamente sin recargar manual.
+        try {
+          // Si el endpoint devolvió el carro creado
+          if (result.carro) {
+            const newCar = result.carro;
+            let updatedUser = cliente ? { ...cliente } : null;
+            if (updatedUser) {
+              updatedUser.carros = Array.isArray(updatedUser.carros) ? [...updatedUser.carros, newCar] : [newCar];
+              setCliente && setCliente(updatedUser);
+              localStorage.setItem('userData', JSON.stringify(updatedUser));
+            } else {
+              // intentar cargar userData desde localStorage y actualizarlo
+              const cached = localStorage.getItem('userData');
+              if (cached) {
+                const parsed = JSON.parse(cached);
+                parsed.carros = Array.isArray(parsed.carros) ? [...parsed.carros, newCar] : [newCar];
+                localStorage.setItem('userData', JSON.stringify(parsed));
+                setCliente && setCliente(parsed);
+              }
+            }
+          } else if (result.user) {
+            // Si el backend devuelve el usuario actualizado
+            setCliente && setCliente(result.user);
+            localStorage.setItem('userData', JSON.stringify(result.user));
+          } else {
+            // Fallback: intentar obtener usuario actualizado desde /api/auth/me
+            const token = localStorage.getItem('token');
+            if (token) {
+              const resp = await fetch('/api/auth/me', {
+                headers: { Authorization: `Bearer ${token}` }
+              });
+              if (resp.ok) {
+                const user = await resp.json();
+                setCliente && setCliente(user);
+                localStorage.setItem('userData', JSON.stringify(user));
+              }
+            }
+          }
+        } catch (syncErr) {
+          // no bloquear por errores de sincronización; seguimos con la navegación
+          console.warn('No se pudo sincronizar inmediatamente after addCarro:', syncErr);
+        }
+
+        // Redirigir a MisCarros (los datos ya fueron actualizados en contexto/localStorage)
         setTimeout(() => {
           navigate('/misCarros');
-        }, 2000);
+        }, 900);
       } else {
         throw new Error(result.error?.message || 'Error al registrar el vehículo');
       }
@@ -205,7 +250,7 @@ function AgregarCarro() {
                       name="marca"
                       value={formData.marca}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-white/50"
+                      className="w-full px-4 py-3 rounded-2xl bg-white/6 border border-white/12 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-shadow shadow-sm"
                       placeholder="ej. Toyota"
                     />
                     {errors.marca && (
@@ -219,7 +264,7 @@ function AgregarCarro() {
                       name="modelo"
                       value={formData.modelo}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-white/50"
+                      className="w-full px-4 py-3 rounded-2xl bg-white/6 border border-white/12 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-shadow shadow-sm"
                       placeholder="ej. Corolla"
                     />
                     {errors.modelo && (
@@ -236,7 +281,7 @@ function AgregarCarro() {
                       name="año"
                       value={formData.año}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-white/50"
+                      className="w-full px-4 py-3 rounded-2xl bg-white/6 border border-white/12 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-shadow shadow-sm"
                       placeholder="2024"
                       min="1900"
                       max={new Date().getFullYear() + 1}
@@ -255,7 +300,7 @@ function AgregarCarro() {
                       name="color"
                       value={formData.color}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-white/50"
+                      className="w-full px-4 py-3 rounded-2xl bg-white/6 border border-white/12 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-shadow shadow-sm"
                       placeholder="ej. Negro"
                     />
                     {errors.color && (
@@ -272,7 +317,7 @@ function AgregarCarro() {
                     value={formData.placas}
                     onChange={handleInputChange}
                     maxLength={3}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-white/50 uppercase tracking-widest text-center text-xl font-bold"
+                    className="w-full px-4 py-4 rounded-3xl bg-white/6 border border-white/12 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-center text-xl font-bold transition-shadow shadow-sm uppercase tracking-widest"
                     placeholder="ABC"
                   />
                   <p className="text-white/40 text-xs mt-1">Ingresa los últimos 3 caracteres de tus placas</p>
@@ -287,14 +332,14 @@ function AgregarCarro() {
                     name="tipo"
                     value={formData.tipo}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-lg text-white focus:outline-none focus:border-white/50 appearance-none"
+                    className="w-full px-4 py-3 rounded-2xl bg-white/6 border border-white/12 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-shadow shadow-sm appearance-none"
                   >
-                    <option value="" className="bg-gray-900">Selecciona el tipo</option>
+                    <option value="" className="text-gray-800">Selecciona el tipo</option>
                     {tiposVehiculo.map((tipo) => (
                       <option 
-                        key={tipo} 
-                        value={tipo} 
-                        className="bg-gray-900"
+                        key={tipo}
+                        value={tipo}
+                        className="text-gray-800"
                       >
                         {tipo.charAt(0).toUpperCase() + tipo.slice(1)}
                       </option>
@@ -306,8 +351,8 @@ function AgregarCarro() {
                 </div>
 
                 {errors.submit && (
-                  <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
-                    <p className="text-red-500 text-sm">{errors.submit}</p>
+                  <div className="bg-rose-600/10 border border-rose-600/20 rounded-lg p-4">
+                    <p className="text-rose-600 text-sm">{errors.submit}</p>
                   </div>
                 )}
 
@@ -320,16 +365,15 @@ function AgregarCarro() {
                 </button>
               </form>
 
+              {/* Success overlay */}
               {showSuccess && (
-                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center">
-                  <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-8 border border-white/20 text-center">
-                    <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
+                <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/40">
+                  <div className="bg-white/6 border border-white/10 p-6 rounded-2xl text-center backdrop-blur-md">
+                    <div className="mx-auto w-16 h-16 flex items-center justify-center rounded-full bg-white/10 mb-4">
+                      <Check className="w-8 h-8 text-white" />
                     </div>
-                    <h3 className="text-xl font-bold text-white mb-2">¡Vehículo Registrado!</h3>
-                    <p className="text-white/70">Tu vehículo ha sido registrado exitosamente.</p>
+                    <h3 className="text-white font-bold text-lg mb-2">Vehículo registrado</h3>
+                    <p className="text-white/70 mb-4">Se ha agregado tu vehículo correctamente. Redirigiendo…</p>
                   </div>
                 </div>
               )}
