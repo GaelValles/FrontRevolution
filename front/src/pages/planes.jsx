@@ -201,12 +201,14 @@ function Planes() {
                         </p>
                     </header>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
                         {servicios.map((s) => (
                             <article
                                 key={s.id}
-                                className={`flex flex-col min-h-[360px] rounded-2xl p-6 border ${cardBase} shadow-sm`}
+                                // Make each card equal height and distribute internal sections evenly
+                                className={`flex flex-col justify-between min-h-[520px] rounded-2xl p-6 border ${cardBase} shadow-sm`}
                             >
+                                {/* Header */}
                                 <div className="mb-4">
                                     <h2 className="text-2xl font-bold mb-1">{s.titulo}</h2>
                                     <p
@@ -216,17 +218,18 @@ function Planes() {
                                     </p>
                                 </div>
 
-                                <div className="mt-4">
+                                {/* Includes - allow this block to grow so price/actions stick to bottom */}
+                                <div className="mt-4 flex-1 overflow-hidden">
                                     <h3 className="text-sm font-semibold text-gray-300 mb-3">
                                         Incluye:
                                     </h3>
-                                    <ul className="space-y-2">
+                                    <ul className="space-y-2 max-h-36 overflow-auto pr-2">
                                         {s.incluye.map((item, idx) => (
                                             <li key={idx} className="flex items-start gap-3">
                                                 <span className="mt-1">
                                                     <Check className="w-4 h-4 text-emerald-400" />
                                                 </span>
-                                                <span className={`${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                                <span className={`${isDarkMode ? 'text-gray-300' : 'text-gray-700'} text-sm`}>
                                                     {item}
                                                 </span>
                                             </li>
@@ -234,26 +237,26 @@ function Planes() {
                                     </ul>
                                 </div>
 
-                                {/* Precios: ahora cada tile tiene altura consistente y badge centrado */}
+                                {/* Precios - keep uniform cards inside a consistent container */}
                                 <div className="mt-6 w-full">
                                     <h3 className="text-sm font-semibold text-gray-300 mb-4">
                                         Precios por tipo de vehículo:
                                     </h3>
 
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                                    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-4">
                                         {vehicleTypes.map((vt) => (
                                             <div
                                                 key={vt}
-                                                className={`flex flex-col items-center justify-between text-center gap-3 p-4 rounded-lg ${isDarkMode ? 'bg-white/3 border-white/6' : 'bg-gray-50 border-gray-100'} border min-w-0 min-h-[86px]`}
+                                                className={`flex flex-col items-center justify-center text-center gap-3 p-6 rounded-lg ${isDarkMode ? 'bg-white/3 border-white/6' : 'bg-gray-50 border-gray-100'} border min-w-0 h-36`}
                                             >
-                                                <div className={`text-sm font-medium truncate ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+                                                <div className={`text-lg font-semibold truncate ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>
                                                     {vt}
                                                 </div>
 
                                                 <div className="w-full flex justify-center">
                                                     <span
-                                                        className={`${buttonClasses} inline-flex items-center justify-center px-4 py-2 rounded-full font-semibold text-sm shadow-sm whitespace-nowrap`}
-                                                        style={{ minWidth: 92 }}
+                                                        className={`${buttonClasses} inline-flex items-center justify-center px-5 py-2 rounded-full font-semibold text-lg shadow-sm whitespace-nowrap`}
+                                                        style={{ minWidth: 140 }}
                                                     >
                                                         {formatPrice(preciosPorServicio[s.id]?.[vt])}
                                                     </span>
@@ -263,7 +266,7 @@ function Planes() {
                                     </div>
                                 </div>
 
-                                {/* acción: separar visualmente y garantizar alineación */}
+                                {/* Acción: pegada al fondo para consistencia visual */}
                                 <div className="mt-6 pt-4">
                                     <div className="flex justify-center">
                                         <button

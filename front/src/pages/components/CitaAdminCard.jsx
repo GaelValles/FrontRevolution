@@ -1,4 +1,4 @@
-import { Clock, Car, User, Phone, MapPin } from 'lucide-react';
+import { Clock, Car, User, Phone, MapPin, Play, CheckSquare } from 'lucide-react';
 import { Draggable } from 'react-beautiful-dnd';
 
 // Update the getDragStyle function for smoother dragging
@@ -10,7 +10,15 @@ const getDragStyle = (isDragging, draggableStyle) => ({
   ...draggableStyle // Important: Spread the draggableStyle at the end
 });
 
-export const CitaAdminCard = ({ cita, index, estadoConfig }) => {
+export const CitaAdminCard = ({ cita, index, estadoConfig, onAdvance }) => {
+  // determine advance button info based on current estado
+  const estado = (cita?.estado || '').toString().toLowerCase();
+  const advanceMap = {
+    programada: { next: 'en_proceso', label: 'Iniciar servicio', Icon: Play },
+    en_proceso: { next: 'completada', label: 'Completar servicio', Icon: CheckSquare }
+  };
+  const advanceInfo = advanceMap[estado];
+
   return (
     <Draggable 
       draggableId={cita._id} 
@@ -99,14 +107,33 @@ export const CitaAdminCard = ({ cita, index, estadoConfig }) => {
 
           </div>
 
- 
-
           {/* Observaciones */}
           {cita.informacionAdicional && (
             <div className="mb-4 p-3 bg-white/5 rounded-lg border border-white/10">
               <p className="text-white/80 text-xs leading-relaxed">
                 {cita.informacionAdicional}
               </p>
+            </div>
+          )}
+
+          {/* Footer actions: advance button (not shown for completada) */}
+          {onAdvance && advanceInfo && (
+            <div className="mt-2 flex justify-end">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  try {
+                    onAdvance(cita);
+                  } catch (err) {
+                    console.error('onAdvance error', err);
+                  }
+                }}
+                className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-3 rounded-xl  transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20"
+                title={advanceInfo.label}
+              >
+                <advanceInfo.Icon className="w-4 h-4" />
+                <span className="text-lg">{advanceInfo.label}</span>
+              </button>
             </div>
           )}
 

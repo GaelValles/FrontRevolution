@@ -77,6 +77,44 @@ const CitasDashboard = () => {
     }
   };
 
+  const handleAdvanceEstado = async (cita) => {
+    if (!cita || !cita._id) return;
+    const current = (cita.estado || '').toString().toLowerCase();
+
+    const advanceMap = {
+      programada: 'en_proceso',
+      en_proceso: 'completada'
+    };
+
+    const nuevoEstado = advanceMap[current];
+    if (!nuevoEstado) return; // no advance available
+
+    try {
+      setLoading(true);
+
+      // Optimistic UI update
+      setCitas(prev => prev.map(c => c._id === cita._id ? {
+        ...c,
+        estado: nuevoEstado,
+        fechaFin: nuevoEstado === 'completada' ? new Date().toISOString() : c.fechaFin
+      } : c));
+
+      // Call backend
+      await updateCitaEstado(cita._id, nuevoEstado);
+
+      // Refresh from backend to ensure consistency (like existing logic)
+      const fresh = await getAllCitas();
+      setCitas(Array.isArray(fresh) ? fresh : []);
+    } catch (err) {
+      console.error('Error avanzando estado de cita:', err);
+      // revert by reloading from backend
+      const originales = await getAllCitas();
+      setCitas(Array.isArray(originales) ? originales : []);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleDragEnd = async (result) => {
     if (!result.destination) return;
 
@@ -387,6 +425,7 @@ const CitasDashboard = () => {
                                 cita={cita} 
                                 index={index}
                                 estadoConfig={estadosConfig[cita.estado]}
+                                onAdvance={handleAdvanceEstado}
                               />
                             ))}
                             {provided.placeholder}

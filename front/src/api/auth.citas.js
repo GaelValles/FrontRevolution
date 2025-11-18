@@ -37,3 +37,5 @@ export const getAllCitasRequest = () =>
   axios.get('/citas/getAllCitas', { headers: getAuthHeaders() });
 export const updateCitaEstadoRequest = (id, estado) =>
   axios.put(`/citas/updateEstado/${id}`, { estado }, { headers: getAuthHeaders() });
+
+export const cancelCitaRequest = (id) => {axios.post(`/citas/${id}/cancel`);};

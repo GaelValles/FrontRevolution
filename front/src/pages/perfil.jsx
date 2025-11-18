@@ -42,9 +42,7 @@ function Perfil() {
                   <h1 className={`text-4xl font-black mb-2 tracking-tight ${valueText}`}>
                     {cliente?.nombre} {cliente?.apellido}
                   </h1>
-                  <p className={labelText}>
-                    {cliente?.rol ? 'Administrador' : 'Cliente'}
-                  </p>
+              
                 </div>
               </div>
             </div>
@@ -60,7 +58,7 @@ function Perfil() {
                   <Mail className={`w-5 h-5 ${isDarkMode ? 'text-white/60' : 'text-gray-600'}`} />
                   <div>
                     <div className={`${labelText} text-sm`}>Email</div>
-                    <div className={`${valueText}`}>{cliente?.email}</div>
+                    <div className={`${valueText}`}>{cliente.correo}</div>
                   </div>
                 </div>
                 <div className={`flex items-center gap-4 p-4 ${subtleBox}`}>
@@ -72,10 +70,7 @@ function Perfil() {
                 </div>
                 <div className={`flex items-center gap-4 p-4 ${subtleBox}`}>
                   <MapPin className={`w-5 h-5 ${isDarkMode ? 'text-white/60' : 'text-gray-600'}`} />
-                  <div>
-                    <div className={`${labelText} text-sm`}>Dirección</div>
-                    <div className={`${valueText}`}>{cliente?.direccion}</div>
-                  </div>
+      
                 </div>
               </div>
             </div>

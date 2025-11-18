@@ -5,7 +5,8 @@ import {
   getCitasByCarroRequest,
   getCitasByClienteRequest,
   getAllCitasRequest,
-  updateCitaEstadoRequest
+  updateCitaEstadoRequest,
+  cancelCitaRequest
 } from '../api/auth.citas';
 
 const CitasContext = createContext();
@@ -32,6 +33,31 @@ export const CitasProvider = ({ children }) => {
   useEffect(() => {
     loadCitas();
   }, []);
+
+  // Cancelar cita: llama al backend, aplica penalidad y sincroniza estado localmente
+  const cancelCita = async (citaId) => {
+    setLoading(true);
+    try {
+      console.debug('[CitasContext] cancelCita -> request id:', citaId);
+      const res = await cancelCitaRequest(citaId);
+      console.debug('[CitasContext] cancelCita response:', res.status, res.data, 'url:', res.request?.responseURL);
+
+      const penaltyUntil = res?.data?.penaltyUntil || null;
+
+      // marcar localmente y recargar desde servidor
+      setCitas(prev => prev.map(c => (c._id === citaId ? { ...c, estado: 'cancelada' } : c)));
+      await loadCitas();
+
+      return { success: true, penaltyUntil, data: res.data };
+    } catch (err) {
+      console.error('[CitasContext] Error cancelando cita:', err?.response?.status, err?.response?.data || err.message);
+      const status = err?.response?.status;
+      const data = err?.response?.data || { message: err?.message || 'Error desconocido' };
+      return { success: false, status, error: data };
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const addCita = async (citaData) => {
     try {
@@ -179,7 +205,8 @@ export const CitasProvider = ({ children }) => {
       getCitasByCarroRequest,
       validateCitaData,
       getAllCitas,
-      updateCitaEstado
+      updateCitaEstado,
+      cancelCita
      }}>
        {children}
      </CitasContext.Provider>

@@ -169,9 +169,15 @@ const Sidebar = ({ onHover }) => {
             <span className={labelClass(isOpenLocal)}>Mi Perfil</span>
           </MenuItem>
 
-          <MenuItem to="#" isDarkMode={isDarkMode} isOpen={isOpenLocal} onClick={(e) => { e.preventDefault(); handleLogout(); }}>
-            <AiOutlineLogout />
-            <span className={labelClass(isOpenLocal)}>Cerrar Sesión</span>
+          <MenuItem
+            to="#"
+            isDarkMode={isDarkMode}
+            isOpen={isOpenLocal}
+            onClick={(e) => { e.preventDefault(); handleLogout(); }}
+            className="group text-rose-500 hover:bg-red-600/50 rounded-md transition-colors"
+          >
+            <AiOutlineLogout className="w-5 h-5 text-rose-500" />
+            <span className={`${labelClass(isOpenLocal)} text-rose-500 `}>Cerrar Sesión</span>
           </MenuItem>
 
         <ThemeSwitch isDarkMode={isDarkMode} toggleTheme={toggleTheme} isOpen={isOpenLocal} />
